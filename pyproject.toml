@@ -1,0 +1,20 @@
+# pyproject.toml — describes src/edf_dnn as an installable Python package.
+# Dependencies are NOT listed here; pixi.toml manages all of them.
+# This file only tells the installer where the package code lives.
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "edf-dnn"
+version = "0.1.0"
+description = "Deep learning models for burn-risk mapping (EDF project)"
+requires-python = ">=3.13"
+dependencies = []
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/edf_dnn"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

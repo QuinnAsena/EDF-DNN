@@ -1,0 +1,54 @@
+# configs/data.yaml — shared data settings used by every experiment.
+# DRAFT: the field names get finalised when the data layer is built (phase 2).
+
+# Folder holding the input files. Relative paths are from the repo root.
+# On a cluster, point this at /glade/... instead (or override it with an
+# environment variable, to be decided in phase 2).
+data_dir: data
+
+# Development data (2009-2024 historical, NorESM2-MM SSP3-7.0 2026-2040).
+# Replace with the master-grid products when they arrive.
+historical_raster: drivers_historical_20092024.tif
+future_raster: drivers_NorESM2-MMssp370_20262040.tif   # uint32, values rounded: grid only
+future_table: data_cmip6_fwivars_NorESM2-MMssp370.csv  # full-precision values, keyed by ID
+
+target: burned01
+
+# PROVISIONAL hand-picked variables, only for building the code.
+# Selected by band name, so order here doesn't need to match the rasters.
+variables:
+  # vegetation
+  - evergreen
+  - decid
+  - mixed
+  - forest
+  - wetland
+  - unburnable
+  - tcc
+  # management / suppression
+  - frac_Critical
+  - frac_Full
+  - frac_Modified
+  # time since fire
+  - ysb_mean
+  - ysb_min
+  - ysb_max
+  # terrain
+  - elevation_1km
+  - slope_1km
+  - TPI_1km
+  - aspect_1km
+  - flowacc_1km
+  - twi_1km
+  # fire weather
+  - fwi_summer_mean
+  - fwi_summer_max
+  - fwi_summer_sum
+  - fwi_annual_mean
+  - fwi_annual_max
+  - fwi_annual_sum
+
+# Spatial cross-validation (phase 2)
+block_size_km: 50     # placeholder; to be tuned
+n_folds: 5
+random_seed: 1984

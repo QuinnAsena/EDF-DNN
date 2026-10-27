@@ -1,0 +1,20 @@
+# configs/experiments/mlp_baseline.yaml
+# DRAFT of what one experiment file will look like; finalised in phase 3.
+# Everything that defines a run lives here and gets copied into its run folder.
+
+name: mlp_baseline
+overwrite: true          # during development, re-running replaces runs/mlp_baseline/
+
+model:
+  architecture: FeedforwardTwo   # class name in edf_dnn.models
+  hidden_size: [128, 256]        # lists = values to grid-search over
+  dropout: [0.1, 0.2]
+
+training:
+  learning_rate: [1.0e-3, 5.0e-4, 1.0e-4]
+  batch_size: 4096
+  max_epochs: 1000
+  patience: 50                   # early stopping
+  imbalance: downsample          # downsample | pos_weight | none
+
+device: auto                     # auto = GPU if available, else CPU

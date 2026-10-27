@@ -1,0 +1,71 @@
+# pixi.toml — the environment definition for EDF-DNN.
+# pixi reads this file, solves compatible package versions, records them in
+# pixi.lock, and installs them into .pixi/envs/<environment-name>/.
+# Run anything inside the environment with:  pixi run <command>
+
+[workspace]
+name = "EDF-DNN"
+channels = ["conda-forge"]
+version = "0.1.0"
+# Two named platforms, both ordinary 64-bit Linux:
+#   linux-64      -> this laptop (WSL), and CPU nodes on NCAR Casper/Derecho
+#   linux-64-cuda -> GPU nodes; cuda = "12" is the minimum CUDA driver assumed
+platforms = ["linux-64", { name = "linux-64-cuda", platform = "linux-64", cuda = "12" }]
+
+# ---------------------------------------------------------------------------
+# Packages shared by every environment.
+# Ranges are ">=current,<next major" so routine updates come in with
+# `pixi update`, but a breaking major release never arrives by surprise.
+# ---------------------------------------------------------------------------
+[dependencies]
+python = "3.13.*"
+numpy = ">=2.5,<3"
+pandas = ">=2.3,<4"          # pandas 3 is allowed; it changes some copy/string behaviour
+scikit-learn = ">=1.9,<2"
+matplotlib = ">=3.11,<4"
+rasterio = ">=1.5,<2"        # reading/writing GeoTIFFs
+rioxarray = ">=0.22,<1"      # rasterio + xarray: labelled raster bands, like terra
+xarray = ">=2026.4"
+pyyaml = ">=6,<7"            # reading the experiment config files in configs/
+pytorch = ">=2.14,<3"
+ipykernel = ">=6.31,<8"      # lets Quarto run Python code cells in this environment
+jupyter = ">=1.1,<2"
+pytest = ">=8"               # automated tests in tests/
+
+# Install our own code (src/edf_dnn) into the environment in "editable" mode:
+# `import edf_dnn` then works from any folder, and edits to the source take
+# effect immediately without reinstalling. This replaces sys.path.insert hacks.
+[pypi-dependencies]
+edf-dnn = { path = ".", editable = true }
+
+# ---------------------------------------------------------------------------
+# Two flavours of PyTorch, picked per environment:
+#   default -> CPU-only build, for this laptop
+#   cuda    -> GPU build, for Casper/Derecho GPU nodes
+# Locally only `default` gets installed. `cuda` is solved (so we know it works)
+# but only installed on a machine where you run `pixi install -e cuda`.
+# ---------------------------------------------------------------------------
+[feature.cpu]
+platforms = ["linux-64"]
+
+[feature.cpu.dependencies]
+pytorch-cpu = "*"
+
+[feature.cuda]
+platforms = ["linux-64-cuda"]
+
+[feature.cuda.dependencies]
+pytorch-gpu = "*"
+
+[environments]
+default = ["cpu"]
+cuda = ["cuda"]
+
+# ---------------------------------------------------------------------------
+# Shortcuts: `pixi run test`, `pixi run register-kernel`
+# ---------------------------------------------------------------------------
+[tasks]
+test = "pytest"
+# Registers this environment's Python as the Jupyter kernel Quarto uses.
+# Re-run after any Python version change.
+register-kernel = "python -m ipykernel install --user --name edf-dnn --display-name EDF-DNN"

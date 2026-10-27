@@ -1,0 +1,27 @@
+# Data and model outputs: large, environment-local, never committed
+/data/
+/runs/
+
+# pixi environments (rebuilt from pixi.lock with `pixi install`)
+/.pixi/
+
+# Python bytecode and build leftovers
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# Test and tool caches
+.pytest_cache/
+.ruff_cache/
+
+# Quarto build output and caches
+/reports/_book/
+/reports/.quarto/
+*.quarto_ipynb
+/.quarto/
+
+# Editor / OS clutter
+.vscode/
+.DS_Store
