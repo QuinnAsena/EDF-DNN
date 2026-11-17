@@ -18,3 +18,8 @@ packages = ["src/edf_dnn"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# Hide one known warning raised inside rioxarray (not our code) so real
+# warnings stand out. See docs/NOTES.md, "Known harmless messages".
+filterwarnings = [
+    "ignore:Use `@` matmul instead of `\\*` mul operator:PendingDeprecationWarning",
+]

@@ -1,0 +1,212 @@
+---
+title: "Two layer MLP"
+---
+
+
+## Two layer MLP with downsampling
+
+`quarto preview mlp_two_lyr_downsampled/mlp_two_lyr_downsampled.qmd --no-browser --no-watch-inputs`
+
+
+```{python}
+#| label: ImportPkgs
+#| echo: true
+
+import numpy as np
+import matplotlib.pyplot as plt
+import pandas as pd
+import pickle
+import joblib
+import torch
+from torch import nn
+import sys, os
+
+# Quarto renders each chapter from its own directory; go up one level to
+# reach src/ at the repo root
+sys.path.insert(0, '..')
+from src.models import FeedforwardTwo as Feedforward
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+```
+
+### Defining a two layer MLP model
+
+Build a model using ReLU activation function between hidden layers. I was going to use a sigmoid output for the binary classification but took some advice from ChatGPT to use `BCEWithLogitsLoss` which takes the raw values not sigmoid-transformed. It took some help from GPT to convert the tutorial regression model to a binary classification model. I hope this is correct.
+
+I'm playing with 1-2 layers and different numbers of neurons, same as the tutorial. Dropout has been included, but not batching.
+
+
+### Training and validation
+
+
+```{python}
+#| label: PlotRes
+results_df = pd.read_csv("./model_out/gridsearch_results_cv.csv")
+
+# Best config by mean CV validation AUC across all k folds
+best_row = results_df.loc[results_df["mean_val_auc"].idxmax()]
+hid_dim  = int(best_row["hid_dim"])
+lr       = best_row["lr"]
+dropout  = best_row["dropout"]
+
+# Load per-fold histories for the best config
+history_path = f"./model_out/history_cv_h{hid_dim}_lr{lr}_do{dropout}.pkl"
+with open(history_path, "rb") as f:
+    cv_hist = pickle.load(f)
+
+# Load final model metrics evaluated on the held-out test set
+with open("./model_out/final_test_results.pkl", "rb") as f:
+    test_results = pickle.load(f)
+
+fig, ax = plt.subplots(1, 3, figsize=(18, 5))
+
+# --- (1) Loss curves — one line per fold so fold-to-fold variance is visible ---
+for fold in cv_hist["fold_histories"]:
+    ax[0].plot(fold["loss_train"], color="steelblue",  alpha=0.4, linewidth=0.8)
+    ax[0].plot(fold["loss_val"],   color="darkorange", alpha=0.4, linewidth=0.8)
+ax[0].set_title(f"CV loss curves (k={len(cv_hist['fold_histories'])} folds)\n"
+                f"hidden={hid_dim}, lr={lr}, dropout={dropout}")
+ax[0].set_xlabel("Epoch")
+ax[0].set_ylabel("Loss")
+from matplotlib.lines import Line2D
+ax[0].legend([Line2D([0],[0],color="steelblue"), Line2D([0],[0],color="darkorange")],
+             ["train", "val"])
+
+# --- (2) Final test confusion matrix ---
+cm = test_results["test_cm"]
+ax[1].imshow(cm, cmap="Blues")
+ax[1].set_title("Confusion matrix (held-out test set)")
+ax[1].set_xticks([0, 1]); ax[1].set_yticks([0, 1])
+ax[1].set_xticklabels(["Unburned", "Burned"])
+ax[1].set_yticklabels(["Unburned", "Burned"])
+ax[1].set_xlabel("Predicted"); ax[1].set_ylabel("True")
+for i in range(2):
+    for j in range(2):
+        ax[1].text(j, i, cm[i, j], ha="center", va="center", fontsize=12)
+
+# --- (3) Final test ROC curve ---
+ax[2].plot(test_results["test_fpr"], test_results["test_tpr"])
+ax[2].plot([0, 1], [0, 1], linestyle="--", color="grey")
+ax[2].set_title(f"ROC curve — test set (AUC = {test_results['test_auc']:.3f})")
+ax[2].set_xlabel("False Positive Rate")
+ax[2].set_ylabel("True Positive Rate")
+
+plt.tight_layout()
+plt.show()
+
+print(f"\nCV best config: hidden={hid_dim}, lr={lr}, dropout={dropout}")
+print(f"Mean CV AUC: {cv_hist['mean_val_auc']:.4f} ± {cv_hist['std_val_auc']:.4f}")
+print(f"Test  AUC={test_results['test_auc']:.4f}  "
+      f"Recall={test_results['test_recall']:.4f}  "
+      f"Brier={test_results['test_brier']:.4f}")
+```
+
+
+### Prediction with two layer MLP
+
+
+Load up the future climate data and subset the same predictor columns
+
+```{python}
+#| label: LoadFuture
+#| eval: true
+all_vars_future = pd.read_csv('../data/data_cmip6_fwivars_NorESM2-MMssp370.csv')
+X_future = all_vars_future[["evergreen", "decid", "mixed", "forest", "wetland",
+                   "unburnable", "tcc", "frac_Critical", "frac_Full",
+                   "frac_Modified", "ysb_mean", "ysb_min", "ysb_max",
+                   "elevation_1km", "slope_1km", "TPI_1km", "aspect_1km",
+                   "flowacc_1km", "twi_1km", "fwi_summer_mean", "fwi_summer_max",
+                   "fwi_summer_sum", "fwi_annual_mean", "fwi_annual_max", "fwi_annual_sum"]]
+# load scaler
+scaler = joblib.load("./model_out/scaler.pkl")
+
+# Scale must use same trained scaler as in training
+X_future_scaled = scaler.transform(X_future)
+X_future_t = torch.FloatTensor(X_future_scaled).to(device)
+
+```
+
+#### Selecting a paramter set
+
+Selecting the model with the highest validation AUC score:
+
+```{python}
+#| label: Pick
+#| eval: true
+
+# Load the saved final-model artefacts (best config + test metrics)
+with open("./model_out/final_test_results.pkl", "rb") as f:
+    final = pickle.load(f)
+
+hid_dim_best  = int(final["hid_dim"])
+lr_best       = float(final["lr"])
+dropout_best  = float(final["dropout"])
+
+checkpoint_path = os.path.join("./checkpoints", final["checkpoint"])
+if not os.path.exists(checkpoint_path):
+    raise FileNotFoundError(f"Checkpoint not found: {checkpoint_path}")
+
+input_dimensions = X_future_scaled.shape[1]
+
+print("\n" + "="*50)
+print("Best Model (selected by mean CV AUC)")
+print("="*50)
+print(f"Hidden Dimension: {hid_dim_best}")
+print(f"Learning Rate:    {lr_best}")
+print(f"Dropout:          {dropout_best}")
+print(f"Test AUC:         {final['test_auc']:.4f}")
+print(f"Test Recall:      {final['test_recall']:.4f}")
+print(f"Test Precision:   {final['test_precision']:.4f}")
+print(f"Test Brier:       {final['test_brier']:.4f}")
+print("="*50 + "\n")
+
+# Rebuild model and load final trained weights
+model_best = Feedforward(input_dimensions, hid_dim_best, dropout_best).to(device)
+model_best.load_state_dict(torch.load(checkpoint_path, map_location=device))
+model_best.eval()
+
+```
+
+#### Run model with said parameter set to predict burns
+
+```{python}
+#| label: Predict
+#| eval: true
+# Make predictions on future climate data
+with torch.no_grad():
+    logits_future = model_best(X_future_t)
+    probs_future = torch.sigmoid(logits_future)  # probability of burned
+    preds_future = (probs_future > 0.5).float()  # binary predictions
+
+preds_future_np = preds_future.cpu().numpy().squeeze()
+probs_future_np = probs_future.cpu().numpy().squeeze()
+
+# Compute prediction statistics
+num_burned = int(preds_future_np.sum())
+num_total = len(preds_future_np)
+prop_burned = num_burned / num_total
+
+# Print results
+print("\n" + "="*50)
+print("Future Climate Predictions")
+print("="*50)
+print(f"Total pixels: {num_total:,}")
+print(f"Predicted burned: {num_burned:,}")
+print(f"Predicted unburned: {num_total - num_burned:,}")
+print(f"Burn probability: {prop_burned*100:.2f}%")
+print(f"Mean predicted probability: {probs_future_np.mean():.4f}")
+print(f"Std of predicted probability: {probs_future_np.std():.4f}")
+print("="*50 + "\n")
+
+# Save predictions to CSV for reproducibility
+output_df = pd.DataFrame({
+    'predicted_prob': probs_future_np,
+    'predicted_binary': preds_future_np,
+})
+output_path = "./model_out/predictions_future.csv"
+os.makedirs("./model_out", exist_ok=True)
+output_df.to_csv(output_path, index=False)
+print(f"✓ Predictions saved to {output_path}")
+
+```

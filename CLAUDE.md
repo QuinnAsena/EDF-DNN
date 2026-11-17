@@ -1,8 +1,8 @@
 # CLAUDE.md
 
 Durable reference for this repo. For "what's been tried and why" see
-[NOTES.md](NOTES.md); for open work see [TODO.md](TODO.md). Keep this file
-free of status updates: it describes what is stable.
+[docs/NOTES.md](docs/NOTES.md); for open work see [docs/TODO.md](docs/TODO.md).
+Keep this file free of status updates: it describes what is stable.
 
 ## Project
 
@@ -37,10 +37,13 @@ experiments and reference code.
 | `src/edf_dnn/train/` | training loop, metrics, `run.py` entry point |
 | `src/edf_dnn/predict.py` | trained run -> future burn-probability GeoTIFF |
 | `configs/` | `data.yaml` (shared) and one YAML per experiment |
+| `tests/` | pytest on tiny synthetic data |
 | `runs/` | gitignored; one folder per experiment with config, metrics, checkpoints |
-| `jobs/` | PBS scripts for Casper/Derecho |
+| `cluster_jobs/` | PBS scripts for Casper/Derecho |
 | `reports/` | Quarto output; reads only from `runs/` |
-| `data/` | gitignored; inputs (currently symlinks to geocomp-2025/data) |
+| `data/` | gitignored; input data (development copies until the master-grid data arrive) |
+| `docs/` | NOTES, TODO, plan snapshot, runbook, repo description, ML glossary |
+| `manual_zone/` | the user's area: `reference/` (old geocomp-2025 code, read-only, for porting) and `scratch/` (learning and verification scripts) |
 
 ## Conventions
 
@@ -53,3 +56,5 @@ experiments and reference code.
   explain the why, including a sentence on neural-network idioms.
 - Quarto `.qmd` for reports; no Jupyter notebooks.
 - Fixed random seed `1984`.
+- When a new ML term enters the code, add it to [docs/glossary.md](docs/glossary.md).
+- Folder or file moves are reflected in [docs/repo-description.md](docs/repo-description.md).

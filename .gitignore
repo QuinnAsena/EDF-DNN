@@ -21,6 +21,9 @@ dist/
 /reports/.quarto/
 *.quarto_ipynb
 /.quarto/
+# Rendered previews of the docs (e.g. plan.html); the .md is the source
+/docs/*.html
+/docs/*_files/
 
 # Editor / OS clutter
 .vscode/
