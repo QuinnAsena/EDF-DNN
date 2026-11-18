@@ -1,15 +1,16 @@
-"""Interactive walkthrough of edf_dnn.data.grid.open_stack on the real data.
+"""Interactive walkthrough of edf_dnn.data.grid (open_stack, crop_to_grid, to_pixel_table) on the real data.
 
 Run it line by line with Shift+Enter (console starts in the repo root), or all
 at once with:  pixi run python manual_zone/scratch/verify_grid.py
 """
 
 import numpy as np
+import pandas as pd
 import rasterio
 import rioxarray
 import yaml
 
-from edf_dnn.data.grid import open_stack
+from edf_dnn.data.grid import crop_to_grid, open_stack, to_pixel_table
 
 # ---------------------------------------------------------------------------
 # 1. The function's arguments, defined by hand
@@ -60,7 +61,72 @@ print(full_stack.shape)                # (26, 1547, 1929)
 # when run as a whole script, the plot is skipped unless you add plt.show().
 full_stack.sel(band="tcc").plot()
 
+# ---------------------------------------------------------------------------
+# 5. crop_to_grid: cut the historical stack down to the future grid
+# ---------------------------------------------------------------------------
+# The function's arguments, defined by hand
+stack = full_stack
+template = rioxarray.open_rasterio(f"{config['data_dir']}/{config['future_raster']}")
+
+# Step through the inside of crop_to_grid
+print(stack.rio.crs == template.rio.crs)        # same projection: True
+print(stack.rio.resolution(), template.rio.resolution())   # (1000.0, -1000.0) for both
+print(stack.rio.transform())                    # c and f: x and y of the top-left corner
+print(template.rio.transform())
+
+cell_width, cell_height = stack.rio.resolution()
+column_offset = (template.rio.transform().c - stack.rio.transform().c) / cell_width
+row_offset = (template.rio.transform().f - stack.rio.transform().f) / cell_height
+print(column_offset, row_offset)                # 547.0 259.0: whole cells, so the grids line up
+
+# Now call the real function and compare
+cropped = crop_to_grid(stack, template)
+print(cropped.shape)                            # (26, 1081, 1329): the future grid's size
+print(cropped.rio.transform() == template.rio.transform())   # True
+
+# Independent check: every cell centre of the crop matches the future file's own coordinates
+print("x match:", np.array_equal(cropped.x.values, template.x.values))
+print("y match:", np.array_equal(cropped.y.values, template.y.values))
+
+# The crop loses no data: same number of burned cells before and after (77,005)
+print("burned before:", int((full_stack.sel(band="burned01") == 1).sum()))
+print("burned after: ", int((cropped.sel(band="burned01") == 1).sum()))
+
+# ---------------------------------------------------------------------------
+# 6. to_pixel_table: one row per pixel, like terra::as.data.frame(xy = TRUE, cells = TRUE)
+# ---------------------------------------------------------------------------
+# Step through the inside of to_pixel_table
+values = cropped.values                         # reads the 26 bands into memory (~150 MB)
+print(values.shape)                             # (26, 1081, 1329): bands, rows, columns
+band_count, row_count, column_count = values.shape
+x_grid, y_grid = np.meshgrid(cropped.x.values, cropped.y.values)
+print(x_grid[:2, :3])                           # x changes along a row...
+print(y_grid[:2, :3])                           # ...y changes down a column
+
+# Now the real function
+table = to_pixel_table(cropped)
+print(table.head())                             # cell_id, x, y, burned01, evergreen, ...
+print(len(table))                               # 563,475 complete pixels out of 1,436,649 cells
+print(table["burned01"].value_counts())         # like table() in R
+
+# Cross-reference with the future CSV. Elevation and slope don't change over
+# time, so joining on cell_id = ID must give identical values, if the IDs match.
+future = pd.read_csv(f"{config['data_dir']}/{config['future_table']}",
+                     usecols=["ID", "elevation_1km", "slope_1km"])
+joined = table.merge(future, left_on="cell_id", right_on="ID",   # like dplyr::inner_join()
+                     suffixes=("_historical", "_future"))
+print(len(joined))                              # pixels found in both tables
+for name in ["elevation_1km", "slope_1km"]:
+    difference = (joined[f"{name}_historical"] - joined[f"{name}_future"]).abs()
+    print(f"{name}: largest difference {difference.max():.2g}")   # ~0: every row lines up
+
+# Control: shift the IDs by one cell and the same check fails almost everywhere
+shifted = table.assign(cell_id=table["cell_id"] + 1).merge(future, left_on="cell_id", right_on="ID",
+                                                           suffixes=("_historical", "_future"))
+mismatches = (shifted["elevation_1km_historical"] - shifted["elevation_1km_future"]).abs() > 0.001
+print("off by one cell, elevations that differ:", int(mismatches.sum()))
+
 # Tidy up before exit, which avoids rioxarray's harmless shutdown message
-del stack, stack_named, stack_selected, result, full_stack
+del stack, stack_named, stack_selected, result, full_stack, template, cropped
 import gc
 gc.collect()   # make Python release the files now, not during shutdown

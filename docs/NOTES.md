@@ -77,3 +77,37 @@ Decisions:
 - **Docs moved to `docs/`** (with a repo description and an ML glossary), and
   `jobs/` renamed `cluster_jobs/`. `manual_zone/` now holds only `reference/`
   and `scratch/`.
+
+## Crop and pixel table on the development data (2026-11-17)
+
+- **The pixel table cross-references the future data exactly.** On the cropped
+  grid, `cell_id` is the future CSV's `ID`. Joined on it, the static terrain
+  layers agree to about 1e-11 (elevation) and 1e-13 (slope) for all 563,162
+  shared pixels; the same join shifted by one cell gives 561,187 mismatches.
+- **563,475 complete pixels** (no missing value in any of the 26 bands), of
+  563,732 with a valid `burned01`. The 257 dropped pixels (14 burned) each
+  miss at least one predictor, mostly terrain or vegetation. 76,991 burned.
+- **313 complete historical pixels have no row in the future CSV** (the two
+  products have slightly different missing-value masks). No effect on
+  training; matters only for which cells a future map can cover.
+- **Why `crop_to_grid` checks alignment itself.** rioxarray's
+  `rio.clip_box()` is a one-line `terra::crop()` look-alike and gives the same
+  result on these aligned grids, but with a template shifted half a cell it
+  silently returns 1,330 columns instead of 1,329, with no error.
+
+## Metrics (2026-11-18)
+
+- **One function, `compute_metrics`,** replaces the three copies in the old
+  `train.py`. Same five numbers: ROC AUC, PR summary, Brier, recall and
+  precision at 0.5.
+- **Average precision replaces the trapezoid PR-AUC.** The PR curve is a
+  staircase; straight lines between its corners misstate the area. On the
+  four-pixel test example the two give 0.833 and 0.792. Old PR-AUC values are
+  therefore not exactly comparable; ROC AUC is unchanged and is the number to
+  compare with geocomp-2025.
+- **Brier and recall/precision depend on how imbalance was handled.** A model
+  trained on downsampled (50/50) data, or with `pos_weight`, predicts higher
+  probabilities than the true 13.7% burn rate, which raises its Brier score
+  and shifts recall/precision at 0.5. ROC AUC and average precision use only
+  the ranking, so they compare fairly across imbalance methods. Brier
+  baseline (always predicting the burned share): about 0.118.

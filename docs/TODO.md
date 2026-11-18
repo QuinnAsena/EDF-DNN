@@ -22,9 +22,9 @@ stratified folds as before, so the old AUCs are a fair check (see NOTES.md,
 2026-11-17).
 
 - [x] `data/grid.py`: `open_stack` opens a raster and selects bands by name
-- [ ] `data/grid.py`: `crop_to_grid`, crop historical to the future grid
-- [ ] `data/grid.py`: stack -> pixel table with `cell_id` and x/y (replaces the old `load_historical`)
-- [ ] `train/metrics.py` (one function; average precision instead of trapezoid PR-AUC)
+- [x] `data/grid.py`: `crop_to_grid`, crop historical to the future grid
+- [x] `data/grid.py`: `to_pixel_table`, stack -> pixel table with `cell_id` and x/y (replaces the old `load_historical`)
+- [x] `train/metrics.py`: `compute_metrics` (average precision instead of trapezoid PR-AUC)
 - [ ] `data/normalise.py` (scaler fitted per fold, on training cells only)
 - [ ] `data/datasets.py`: `PixelDataset`
 - [ ] `train/loop.py`: train one epoch, evaluate, early stopping
