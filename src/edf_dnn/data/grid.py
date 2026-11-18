@@ -164,10 +164,12 @@ def to_pixel_table(stack):
     band_count, row_count, column_count = values.shape
 
     # One row per pixel, one column per band. reshape walks the grid row by
-    # row (terra's cell order); .T flips (bands x pixels) into (pixels x bands)
+    # row (terra's cell order); .T flips (bands x pixels) into (pixels x bands).
+    # str() turns numpy's band-name type into plain Python text: sklearn only
+    # records (and later checks) column names that are plain text.
     table = pd.DataFrame(
         values.reshape(band_count, row_count * column_count).T,
-        columns=list(stack.band.values),
+        columns=[str(name) for name in stack.band.values],
     )
 
     # Cell centre coordinates in the same row-by-row order. meshgrid repeats

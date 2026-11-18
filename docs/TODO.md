@@ -25,10 +25,10 @@ stratified folds as before, so the old AUCs are a fair check (see NOTES.md,
 - [x] `data/grid.py`: `crop_to_grid`, crop historical to the future grid
 - [x] `data/grid.py`: `to_pixel_table`, stack -> pixel table with `cell_id` and x/y (replaces the old `load_historical`)
 - [x] `train/metrics.py`: `compute_metrics` (average precision instead of trapezoid PR-AUC)
-- [ ] `data/normalise.py` (scaler fitted per fold, on training cells only)
+- [x] `data/normalise.py`: sklearn `MinMaxScaler`, with `save_scaler`/`load_scaler` (pickle in the run folder)
 - [ ] `data/datasets.py`: `PixelDataset`
 - [ ] `train/loop.py`: train one epoch, evaluate, early stopping
-- [ ] `train/run.py`: held-out test set + stratified k-fold, run folders with `overwrite`
+- [ ] `train/run.py`: held-out test set + stratified k-fold, run folders with `overwrite`; save per-pixel predictions (`cell_id`, label, probability) so curves and new metrics need no retraining
 - [ ] Old MLP variants as experiment configs; compare with the old AUCs
 
 ## Phases 2-3, part 2: spatial folds and prediction
@@ -49,7 +49,7 @@ stratified folds as before, so the old AUCs are a fair check (see NOTES.md,
 - [ ] float32 rasters with band names and defined nodata
 - [ ] Decadal summaries: which periods, and a burn label per period?
 - [ ] Meaning of ysb = 100, and the reference date for years-since-burn
-- [ ] Final variable set common to historical and future
+- [ ] Final variable set common to historical and future (and which skewed ones, like `flowacc_1km`, need a log before scaling: see NOTES 2026-11-18)
 
 ## Benched
 

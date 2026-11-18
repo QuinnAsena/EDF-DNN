@@ -9,6 +9,7 @@ import rasterio
 import rioxarray  # noqa: F401  (adds the .rio tools to xarray objects)
 import xarray as xr
 from rasterio.transform import from_origin
+from sklearn.preprocessing import MinMaxScaler
 
 from edf_dnn.data.grid import crop_to_grid, open_stack, to_pixel_table
 
@@ -138,6 +139,20 @@ def test_pixel_table_rows_match_their_cells():
     # right of and 1.5 km below the top-left corner (0, 2000)
     cell_5 = table[table["cell_id"] == 5].iloc[0]
     assert (cell_5["x"], cell_5["y"]) == (1500, 500)
+
+
+def test_pixel_table_names_are_checked_by_a_scaler():
+    one_band = make_grid(left=0, top=2000, height=2, width=3)
+    stack = xr.concat([one_band, one_band * 2], dim="band").assign_coords(band=["first", "second"])
+    table = to_pixel_table(stack)
+
+    # A scaler fitted on the table must record the band names, so that a
+    # column mix-up later fails loudly. (With numpy's text type as column
+    # names, sklearn silently records none and checks nothing.)
+    scaler = MinMaxScaler().fit(table[["first", "second"]])
+    assert list(scaler.feature_names_in_) == ["first", "second"]
+    with pytest.raises(ValueError, match="feature names"):
+        scaler.transform(table[["second", "first"]])
 
 
 def test_pixel_table_drops_missing_and_keeps_cell_ids():

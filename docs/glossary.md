@@ -19,6 +19,9 @@ and the nearest R or statistics idea. Add a row whenever a new term comes up.
 | Downsampling | Drop majority-class samples from the training folds until classes are balanced | `imbalance: downsample` | `sample()` on the unburned rows |
 | `pos_weight` | Alternative to downsampling: keep every sample, but count each burned pixel's error (unburned / burned) times more in the loss | `imbalance: pos_weight` | `weights =` in `glm()` |
 | Scaling / normalisation | Rescale each variable to a similar range (0-1, or mean 0 and sd 1) so no variable dominates just by its units | `data/normalise.py` | `scale()` |
+| Min-max scaling | (x - min) / (max - min), with min and max from the training pixels, so those span 0-1. Squashed by extreme values: heavily skewed variables need a log first | `MinMaxScaler`, saved by `save_scaler` | `scales::rescale()` |
+| Pickle | Python's way of saving any object to a file and loading it back unchanged | `scaler.pkl` | `saveRDS()` / `readRDS()` |
+| float32 / float64 | Single (about 7 digits) and double (about 16 digits) precision numbers. Networks compute in float32: half the memory, ample precision | rasters are float32 | R numerics are always float64 |
 | Data leakage | Information from validation or test data getting into training (e.g. a scaler fitted on all data), which makes scores look better than they are | why folds and scaling sit in `data/` | |
 
 ## Network building blocks
@@ -69,9 +72,14 @@ and the nearest R or statistics idea. Add a row whenever a new term comes up.
 | Confusion matrix | Counts of true/false positives and negatives at a threshold | `train/metrics.py` | `table(observed, predicted)` |
 | Precision | Of the pixels predicted burned, the fraction that actually burned: TP / (TP + FP) | `train/metrics.py` | positive predictive value |
 | Recall (sensitivity) | Of the pixels that actually burned, the fraction the model caught: TP / (TP + FN) | `train/metrics.py` | sensitivity |
+| Specificity | Of the pixels that did not burn, the fraction correctly left out: TN / (TN + FP) | `train/metrics.py` | true negative rate |
+| True skill statistic (TSS) | Recall + specificity - 1, at a threshold. 0 = random, 1 = perfect; unaffected by the burned share (Allouche et al. 2006) | `train/metrics.py` | Youden's J |
+| Burned share (prevalence) | Fraction of the evaluated pixels that burned; the no-skill baseline for average precision and the Brier skill score | `train/metrics.py` | `mean(y)` |
 | ROC AUC | Chance the model ranks a random burned pixel above a random unburned one. 0.5 = coin toss, 1 = perfect | `train/metrics.py` | `pROC::auc()` |
 | Average precision (PR AUC) | Summary of the precision-recall curve; more informative when classes are imbalanced. A useless model scores the burned share (about 0.14 here) | `train/metrics.py` | `PRROC` |
-| Brier score | Mean squared difference between predicted probability and the 0/1 outcome; lower is better | `train/metrics.py` | `mean((p - y)^2)` |
+| Brier score | Mean squared difference between predicted probability and the 0/1 outcome; lower is better (Brier 1950) | `train/metrics.py` | `mean((p - y)^2)` |
+| Brier skill score | Brier score relative to always predicting the burned share. 1 = perfect, 0 = no skill, below 0 = worse than that | `train/metrics.py` | `1 - BS / BS_reference` |
+| Log loss | Binary cross-entropy as an evaluation score: like Brier, but punishes confident mistakes much harder; lower is better | `train/metrics.py` | binomial deviance / (2n) |
 | Calibration | Whether a predicted 0.7 really means about 70% of such pixels burn | | |
 
 ## Spatial models (CNN, U-Net)

@@ -98,8 +98,19 @@ Decisions:
 ## Metrics (2026-11-18)
 
 - **One function, `compute_metrics`,** replaces the three copies in the old
-  `train.py`. Same five numbers: ROC AUC, PR summary, Brier, recall and
-  precision at 0.5.
+  `train.py`. The old five numbers (ROC AUC, PR summary, Brier, recall and
+  precision at 0.5) plus burned share, Brier skill score, log loss,
+  specificity and TSS. Accuracy, kappa, F1 and MCC left out: accuracy and
+  kappa depend on the burned share (always predicting "unburned" is 86%
+  accurate), and F1/MCC repeat what recall, precision and TSS already show.
+- **It refuses one-class labels and out-of-range probabilities.** sklearn 1.9
+  returns NaN ROC AUC with only a warning when a set has no burned pixels
+  (possible with spatial folds); logits passed without the sigmoid would
+  leave ROC AUC unchanged but make Brier and recall meaningless.
+- **Any other metric can be added later without retraining**, as long as the
+  runs save per-pixel predictions (`cell_id`, label, probability). Only the
+  metrics used during training (early stopping, picking the best
+  hyperparameters) must be fixed before the runs.
 - **Average precision replaces the trapezoid PR-AUC.** The PR curve is a
   staircase; straight lines between its corners misstate the area. On the
   four-pixel test example the two give 0.833 and 0.792. Old PR-AUC values are
@@ -111,3 +122,31 @@ Decisions:
   and shifts recall/precision at 0.5. ROC AUC and average precision use only
   the ranking, so they compare fairly across imbalance methods. Brier
   baseline (always predicting the burned share): about 0.118.
+
+## Scaling (2026-11-18)
+
+- **sklearn's `MinMaxScaler`, saved as a pickle, as in geocomp-2025.**
+  `normalise.py` only holds `save_scaler`/`load_scaler`, so the file name
+  (`scaler.pkl` in the run folder) is defined once. A home-made version
+  (statistics as CSV, plus a "standard" option) was drafted and dropped as
+  overkill: fitted on a DataFrame, `MinMaxScaler` already refuses a table
+  whose columns differ or come in a different order; `pixi.lock` pins the
+  sklearn version, so the pickle loads on laptop and cluster alike (another
+  version gives an `InconsistentVersionWarning`, not silence); and
+  `data_min_`/`data_range_` give the numbers for raster stacks later.
+- **That name check only works with plain-text column names.** xarray hands
+  band names over as numpy's `str_` type, and sklearn then records no names
+  and checks nothing, without a warning: reordered columns went through.
+  Found in the real-data walkthrough; `to_pixel_table` now converts the names
+  with `str()`, and a test fits a scaler on its output.
+- **`flowacc_1km` is useless as scaled.** It runs from about 1,000 to 357
+  million; after min-max scaling half the pixels are below 0.00001, so the
+  network sees almost a constant. Options: log-transform it first, or drop it
+  (`twi_1km` is already built from the log of flow accumulation). Decide with
+  the final variable set.
+- **Order of scaling and downsampling, to settle in `run.py`.** The old code
+  downsampled the training fold first and fitted the scaler on what was left.
+  Fitting on the full training fold is steadier, and gives the same scaling
+  whichever imbalance method is used.
+- **pandas gotcha, for later code:** assigning several columns at once
+  (`df[names] = other`) matches columns by position, not name.
