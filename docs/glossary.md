@@ -7,17 +7,16 @@ and the nearest R or statistics idea. Add a row whenever a new term comes up.
 
 | Term | Plain meaning | In our code | R / stats analogy |
 |---|---|---|---|
-| Tensor | PyTorch's array: numbers in any number of dimensions, stored on CPU or GPU | everything that goes into a model | `array()`, `matrix()` |
+| Tensor | PyTorch's array: numbers in any number of dimensions, like a numpy array. It can live on a GPU, and remembers the calculations done on it, for the gradients | everything that goes into a model | `array()`, `matrix()` |
 | Sample | One example the model learns from: a pixel (MLP) or a patch (CNN) | `data/datasets.py` | one row of a data frame |
 | Feature / predictor | One input variable, e.g. `tcc` | `variables:` in `configs/data.yaml` | covariate, explanatory variable |
 | Label / target | The answer the model should predict | `burned01` | response variable `y` |
 | Dataset | Object that answers "how many samples?" and "give me sample i" | `data/datasets.py` | |
-| Tensor | PyTorch's array: like a numpy array, but it can live on a GPU and remembers the calculations done on it, for the gradients | everywhere in training | an R array |
 | `TensorDataset` | Ready-made Dataset that bundles matching tensors: sample i is row i of each | `pixel_dataset` | `cbind()`-ed columns of one table |
 | DataLoader | Deals a Dataset out in mini-batches, one per step of a for loop | `batch_loader` | `for (rows in chunks) table[rows, ]` |
 | Sampler (`RandomSampler`, `BatchSampler`) | Decides the order rows are visited in (random or as they are) and cuts it into batches | `batch_loader` | `sample()`, then `split()` |
 | Batch / mini-batch | A handful of samples processed together before one weight update. Full-batch = all data at once, as in the old code | `batch_size` in experiment configs | |
-| Epoch | One full pass through the training data | `max_epochs` | one iteration over all rows |
+| Epoch | One full pass through the training data. With batches of 4096 that is about 111 weight updates; in the old full-batch code it was 1 | `max_epochs` | one iteration over all rows |
 | Class imbalance | Far more of one class than the other (here about 6 unburned per burned pixel) | | rare-event data |
 | Downsampling | Drop majority-class samples from the training folds until classes are balanced | `imbalance: downsample` | `sample()` on the unburned rows |
 | `pos_weight` | Alternative to downsampling: keep every sample, but count each burned pixel's error (unburned / burned) times more in the loss | `imbalance: pos_weight` | `weights =` in `glm()` |
@@ -40,7 +39,7 @@ and the nearest R or statistics idea. Add a row whenever a new term comes up.
 | Logit | The raw model output, from minus to plus infinity: the log-odds | every model returns logits | `predict(type = "link")` |
 | Sigmoid | Turns a logit into a probability between 0 and 1 | applied at evaluation and prediction | `plogis()` |
 | Dropout | During training, randomly switch off a fraction of neurons on each pass, so the network can't rely on any single one. Reduces overfitting. Off at prediction time | `dropout` | |
-| Bagging | Train many separate models on bootstrap resamples and average them. Dropout is often described as a cheap version of bagging many thinned networks inside one network | not used | random forest = bagged trees |
+| Bagging | Train many separate models on resamples of the data and average them. Dropout is often described as a cheap version of bagging many thinned networks inside one network | planned: the downsampling ensemble ("EasyEnsemble", TODO.md) | random forest = bagged trees |
 | `model.train()` / `model.eval()` | Switch the model into training mode (dropout on) or evaluation mode (dropout off) | `train/loop.py` | |
 
 ## Training
@@ -61,7 +60,7 @@ and the nearest R or statistics idea. Add a row whenever a new term comes up.
 | Seed | Fixed starting point for random numbers, so runs are reproducible | `1984` | `set.seed()` |
 | Checkpoint, `state_dict` | The saved weights of a trained model (`.pt` file) | `runs/<experiment>/` | `saveRDS(model)` |
 | `torch.no_grad()` | Switches off gradient tracking when only predicting: faster, less memory | `train/loop.py` | |
-| Device, GPU, CUDA | Where tensors and computations live. GPU = graphics card, much faster for networks; CUDA = NVIDIA's GPU platform | `device: auto` | |
+| Device, GPU, CUDA | Where tensors and computations live. GPU = graphics card, much faster for networks; CUDA = NVIDIA's GPU platform | `device: auto`, `choose_device` | |
 
 ## Validation and evaluation
 

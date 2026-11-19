@@ -18,9 +18,12 @@ metres next to forest fractions of 0-1), so every predictor is mapped onto
   would leak information about the validation and test pixels into training.
 - Fit on the table's columns (a DataFrame), not a bare numpy array. The
   scaler then records the variable names, and transform() refuses a table
-  whose columns differ or come in a different order.
+  whose columns differ or come in a different order. Transform DataFrames
+  too: given a bare numpy array, it only warns and scales by position.
 - Values outside the training range scale to below 0 or above 1 (a hotter
-  future, say). That is expected, and fine for a network.
+  future, say). The network still runs, but its predictions there are
+  extrapolation, so it is worth knowing how much of the future grid lies
+  outside the training range.
 """
 
 import pickle

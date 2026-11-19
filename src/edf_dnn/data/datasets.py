@@ -17,7 +17,9 @@ Planned (phase 4)
 -----------------
 - PatchDataset : one sample = a square window of pixels around a location
                  (the CNN and U-Net view). A hand-written Dataset, because
-                 patches are cut out on the fly; batch_loader works for it unchanged.
+                 patches are cut out on the fly. To work with batch_loader,
+                 its __getitem__ must accept a list of row numbers and return
+                 the whole batch (batch_loader asks for dataset[rows]).
 """
 
 import torch
@@ -89,6 +91,8 @@ def batch_loader(dataset, batch_size, shuffle):
 
     # The DataLoader fetches each chunk's rows from the dataset in one go
     # (dataset[rows]). batch_size=None means "the chunks already are the
-    # batches": without it, the DataLoader fetches pixel by pixel and regroups
-    # them, about 10x slower (4.9 s instead of 0.4 s per epoch on our data).
+    # batches" (left at its default, it would wrap each chunk in an extra
+    # batch dimension). A plain DataLoader(dataset, batch_size, shuffle=True)
+    # fetches pixel by pixel and regroups them: about 10x slower (4.9 s
+    # instead of 0.4 s per epoch on our data).
     return DataLoader(dataset, sampler=chunks, batch_size=None)

@@ -4,6 +4,7 @@ Run with:  pixi run test
 """
 
 import pandas as pd
+import pytest
 import torch
 from sklearn.preprocessing import MinMaxScaler
 
@@ -31,6 +32,19 @@ def test_dataset_holds_every_pixel_scaled():
     # All ten labels, burned and unburned: nothing filtered
     assert labels.tolist() == TABLE["burned01"].tolist()
     assert cell_ids.tolist() == TABLE["cell_id"].tolist()
+
+
+def test_dataset_uses_the_given_scaler_not_its_own_table():
+    # Validation pixels outside the training range (1010-1100 m). Scaled with
+    # the TRAINING scaler they fall outside 0-1; a dataset that refitted the
+    # scaler on its own table (data leakage) would give exactly 0 and 1.
+    validation = pd.DataFrame({"cell_id": [201, 202], "elevation": [1000.0, 1190.0],
+                               "burned01": [0.0, 1.0]})
+
+    features, _, _ = pixel_dataset(validation, ["elevation"], SCALER).tensors
+
+    # (1000 - 1010) / 90 and (1190 - 1010) / 90
+    assert features.ravel().tolist() == pytest.approx([-10 / 90, 2.0])
 
 
 def test_shuffled_batches_keep_each_pixel_together():

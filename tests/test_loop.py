@@ -66,7 +66,7 @@ def test_fit_stops_after_patience_and_keeps_the_best_weights():
     training = batch_loader(TensorDataset(features, burned, cell_ids), batch_size=50, shuffle=True)
     # Validation pixels follow the OPPOSITE rule: the better the model learns
     # the training rule, the worse its validation AUC. So the best epoch is
-    # the first, and the last is much worse (AUC 0.61 at epoch 1, near 0 at 6).
+    # the first, and the last is much worse (AUC 0.89 at epoch 1, 0.004 at 6).
     validation = batch_loader(TensorDataset(features, 1 - burned, cell_ids), batch_size=50,
                               shuffle=False)
     model, optimizer = make_model()

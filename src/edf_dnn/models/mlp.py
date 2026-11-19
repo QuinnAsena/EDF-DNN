@@ -4,7 +4,6 @@ Each takes a batch of pixel predictor vectors (batch x variables) and returns
 one raw logit per pixel (batch x 1).
 """
 
-import torch
 from torch import nn
 
 

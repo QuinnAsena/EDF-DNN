@@ -5,6 +5,6 @@ Planned usage (phase 3):
 
 Reads the experiment config, trains with cross-validation, and writes
 everything to runs/<experiment_name>/: the resolved config, the git commit,
-scaling statistics, metrics and checkpoints. If that folder already exists,
+the fitted scaler, metrics and checkpoints. If that folder already exists,
 the run stops unless the config sets `overwrite: true`.
 """

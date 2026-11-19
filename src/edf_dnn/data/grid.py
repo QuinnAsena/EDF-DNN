@@ -49,8 +49,12 @@ def open_stack(raster_path, variables):
         band_names = (band_names,)
     band_names = list(band_names)
 
-    # Fail loudly, listing every missing name, rather than continuing
-    # with the wrong layers
+    # Fail loudly, listing every duplicated or missing name, rather than
+    # continuing with the wrong layers. (A name listed twice in data.yaml
+    # would otherwise give two copies of that band.)
+    duplicated = sorted({name for name in variables if list(variables).count(name) > 1})
+    if duplicated:
+        raise ValueError(f"Variables listed more than once: {duplicated}")
     missing = [name for name in variables if name not in band_names]
     if missing:
         raise ValueError(f"Variables not found in {raster_path}: {missing}")
@@ -58,9 +62,9 @@ def open_stack(raster_path, variables):
     # Label the bands with their names, then select by name
     stack = stack.assign_coords(band=band_names).sel(band=list(variables))
 
-    # Some attributes hold one value per ORIGINAL band (names, statistics,
-    # scale/offset). Cut them down to the selected bands so they stay correct
-    # if the stack is written back to a GeoTIFF.
+    # Some attributes can hold one value per ORIGINAL band: in our rasters
+    # only the band names, in other files also statistics or scale/offset.
+    # Cut those down to the selected bands so they stay correct.
     selected_positions = [band_names.index(name) for name in variables]
     stack.attrs = {
         key: (tuple(value[position] for position in selected_positions)

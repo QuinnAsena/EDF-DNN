@@ -42,12 +42,15 @@ stratified folds as before, so the old AUCs are a fair check (see NOTES.md,
 - [ ] `data/blocks.py`: spatial block + fold map, saved once; replaces the random folds
 - [ ] Rebuild a float32 future stack from the future CSV via `ID`
 - [ ] `predict.py`: trained run -> future burn-probability GeoTIFF
+- [ ] Future pixels have no labels: `pixel_dataset` and the prediction function need a no-label path
 
 ## Phase 4: patch CNN, then U-Net
 
 ## Phase 5: cluster (PBS scripts in `cluster_jobs/`, Casper GPU test, grid search as job array)
 
 ## Phase 6: Quarto reports from `runs/`
+
+- [ ] If a burned/unburned map is ever needed: TSS-vs-threshold curve from saved validation predictions (see NOTES 2026-11-19)
 
 ## Waiting on colleagues (new master-grid data)
 

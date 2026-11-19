@@ -210,9 +210,10 @@ One run on the development data: two-layer MLP (hidden 128, dropout 0.1,
 Adam 1e-3), training pixels downsampled to 50/50, random 80/20 split,
 batches of 4096, 600 epochs (about 10 minutes on the laptop CPU).
 
-- **Mini-batches vs full-batch.** Same model, same number of weight updates
-  (111), same validation AUC (0.72); 1 mini-batch epoch took 2.7 s against
-  447 s for 111 full-batch epochs.
+- **Mini-batches vs full-batch** (a separate run on all 450,756 training
+  pixels, not downsampled). Same model, same number of weight updates (111),
+  same validation AUC (0.72); 1 mini-batch epoch took 2.7 s against 447 s
+  for 111 full-batch epochs.
 - **No overfitting within 600 epochs on random folds.** Validation AUC rose
   steadily: 0.81 at epoch 50, 0.87 at 300, 0.89 at 600 (the old two-layer
   downsampled result was about 0.86). Random folds flatter this: validation
@@ -238,3 +239,45 @@ batches of 4096, 600 epochs (about 10 minutes on the laptop CPU).
   time cap. Run time is not a constraint (overnight or weekend runs are
   fine). With all validation metrics logged every epoch, one epoch takes
   about 1.1 s on the laptop CPU, so about 19 minutes per fold at 1000.
+
+## Threshold for recall, precision and TSS (2026-11-19)
+
+- **Not a hyperparameter.** The threshold changes nothing in training, early
+  stopping (ROC AUC), hyperparameter choice or the probability maps; only
+  recall, precision, specificity and TSS. It can be chosen afterwards from
+  the saved validation predictions, without retraining.
+- **0.5 is the right default for a model trained on 50/50 data.** On a
+  downsampled-trained two-layer MLP (100 epochs, validation ROC AUC 0.83),
+  TSS peaked at exactly 0.50 (0.493; 0.492 at 0.55; 0.405 at 0.30, 0.415 at
+  0.70). In theory, 0.5 on the balanced scale is the burned share (13.7%) on
+  the real scale: p_real = b p / (b p - p + 1) with b = burned/unburned =
+  0.158 gives 0.137 at p = 0.5. Liu et al. (2005), Ecography 28: 385-393,
+  https://doi.org/10.1111/j.0906-7590.2005.03957.x, compare threshold rules
+  for species distribution models.
+- The same model's mean predicted probability was 0.40 against a burned share
+  of 0.136: the inflation noted in the ensemble entry above.
+
+## Review before run.py (2026-11-19)
+
+Full read of docs, configs and memory, plus an independent code review. No
+correctness bugs in the implemented code. Fixed: a duplicated glossary row;
+two comments in `datasets.py` that misdescribed `batch_size=None` and the
+future `PatchDataset`; `open_stack` now refuses a variable listed twice; a
+test that would have missed scaler leakage in `pixel_dataset`; smaller
+wording fixes. For the `run.py` design:
+
+- **Seed per fold and per hyperparameter setting.** Model initialisation,
+  dropout and shuffling all draw from torch's one global random-number
+  stream, and even evaluation loaders consume from it, so otherwise a
+  setting's result depends on what ran before it.
+- **Final retrain has no validation set,** so `fit` (which needs one) does not
+  fit; train a fixed number of epochs from the folds' best epochs instead.
+- Models are looked up by class name from the config, but
+  `edf_dnn.models` does not expose the classes yet.
+- Only the final model's scaler needs saving (per-fold results are kept as
+  per-pixel predictions); create the run folder before saving into it.
+- Use positions (`.iloc`), not labels, with `StratifiedKFold` indices.
+- Paths in `data.yaml` must resolve from the repo root, not the working
+  directory (cluster jobs start elsewhere).
+- A fold's best-epoch validation AUC is slightly optimistic (the best of many
+  epochs on that fold); only the held-out test score is unbiased.

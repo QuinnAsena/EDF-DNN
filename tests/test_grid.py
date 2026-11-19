@@ -69,6 +69,14 @@ def test_missing_variable_raises_and_names_it(tmp_path):
         open_stack(path, ["evergreen", "not_a_band"])
 
 
+def test_variable_listed_twice_raises(tmp_path):
+    path = tmp_path / "tiny.tif"
+    write_tiny_raster(path, ["burned01", "evergreen"])
+
+    with pytest.raises(ValueError, match="more than once.*evergreen"):
+        open_stack(path, ["evergreen", "burned01", "evergreen"])
+
+
 # ---------------------------------------------------------------------------
 # crop_to_grid
 # ---------------------------------------------------------------------------
