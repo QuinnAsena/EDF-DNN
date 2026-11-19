@@ -26,10 +26,16 @@ stratified folds as before, so the old AUCs are a fair check (see NOTES.md,
 - [x] `data/grid.py`: `to_pixel_table`, stack -> pixel table with `cell_id` and x/y (replaces the old `load_historical`)
 - [x] `train/metrics.py`: `compute_metrics` (average precision instead of trapezoid PR-AUC)
 - [x] `data/normalise.py`: sklearn `MinMaxScaler`, with `save_scaler`/`load_scaler` (pickle in the run folder)
-- [ ] `data/datasets.py`: `PixelDataset`
-- [ ] `train/loop.py`: train one epoch, evaluate, early stopping
+- [x] `data/datasets.py`: `pixel_dataset` (a `TensorDataset`) + `batch_loader`, instead of a `PixelDataset` class
+- [x] `train/loop.py`: `choose_device`, `train_one_epoch`, `predict`, `fit` (early stopping on validation ROC AUC, patience 30, max 1000 epochs)
 - [ ] `train/run.py`: held-out test set + stratified k-fold, run folders with `overwrite`; save per-pixel predictions (`cell_id`, label, probability) so curves and new metrics need no retraining
 - [ ] Old MLP variants as experiment configs; compare with the old AUCs
+
+## After the MLPs run: imbalance as an ensemble
+
+- [ ] Repeated downsampling ("EasyEnsemble"): at least ~13 runs, each with all burned + a fresh random set of unburned pixels, predictions averaged (advice from Saverio, see NOTES 2026-11-19)
+- [ ] Compare: one model with fresh unburned pixels every epoch; many small runs (e.g. 100 x 1,000 + 1,000)
+- [ ] Correct averaged probabilities for the sampling ratio before mapping absolute burn probability
 
 ## Phases 2-3, part 2: spatial folds and prediction
 

@@ -150,3 +150,91 @@ Decisions:
   whichever imbalance method is used.
 - **pandas gotcha, for later code:** assigning several columns at once
   (`df[names] = other`) matches columns by position, not name.
+
+## Datasets and mini-batches (2026-11-19)
+
+- **No `PixelDataset` class.** PyTorch's built-in `TensorDataset` does the
+  job: `pixel_dataset` scales the predictors and bundles features, labels and
+  `cell_id` (so predictions are matched back by `cell_id`, not row order).
+  The hand-written Dataset comes with the CNN's `PatchDataset`.
+- **Fetch whole batches, not single pixels.** A plain `DataLoader` fetches
+  pixel by pixel and regroups: 4.9 s per epoch just for fetching 450,000
+  pixels, more than the training itself (7.2 s per epoch in total with a
+  two-layer MLP on the laptop CPU). `batch_loader` hands the DataLoader whole
+  batches of row numbers (`BatchSampler`, `batch_size=None`): 0.4 s. On the
+  real training pixels: 111 batches of 4096 per epoch, fetched in 0.42 s.
+- **Why shuffle.** The pixel table is in map order, so unshuffled batches
+  would each come from one strip of the map. Shuffled batches are random
+  mixes of regions and of burned/unburned pixels, redrawn every epoch.
+
+## Imbalance as an ensemble of downsampled runs (recorded 2026-11-19, for after the MLPs run)
+
+Advice from Saverio Mancino (geocomp-2025 course, 2025-11-29) on the old
+set-up: random training/validation split, training pixels downsampled to
+50/50, validation left at the real ratio.
+
+- **The set-up is sound.** Downsample only the training pixels; keep
+  validation (and test) at the real ratio, as the map will be.
+- **Better: repeat it and average.** Train many times, each with a different
+  random sample of unburned pixels, and average the models' predictions.
+  Together the runs use all unburned pixels and capture their variability
+  instead of discarding most of them; each run is balanced, so there is no
+  built-in bias, which also helps when explaining the model.
+- **How many runs: more than double the class ratio.** The old training set
+  had 61,540 burned and 388,884 unburned pixels (about 6.3 to 1), so at
+  least about 13 runs, each with all burned pixels plus as many random
+  unburned ones.
+- **Cheaper alternative:** many small balanced runs that subsample the burned
+  pixels too (e.g. 100 runs of 1,000 + 1,000). Also captures the variability
+  among burned pixels, at the cost of less data per run.
+- `pos_weight` (weighting the loss instead) was tried in geocomp-2025 without
+  a clear gain.
+
+Notes for when we get there:
+
+- This is "EasyEnsemble": Liu, Wu & Zhou (2009), IEEE Transactions on
+  Systems, Man, and Cybernetics B 39: 539-550,
+  https://doi.org/10.1109/TSMCB.2008.2007853
+- Mini-batches make it affordable: one downsampled run takes minutes on the
+  laptop CPU, so 13+ runs is a small job array on the cluster.
+- A single-model variant worth comparing: draw a fresh random set of unburned
+  pixels every epoch, so one model sees them all over its training.
+- Models trained on 50/50 data predict probabilities above the true burn
+  rate, and so does their average. Rankings (ROC AUC, average precision) are
+  unaffected; maps of absolute probability (and the Brier score) need a
+  correction for the sampling ratio.
+
+## Training curve with mini-batches (2026-11-19)
+
+One run on the development data: two-layer MLP (hidden 128, dropout 0.1,
+Adam 1e-3), training pixels downsampled to 50/50, random 80/20 split,
+batches of 4096, 600 epochs (about 10 minutes on the laptop CPU).
+
+- **Mini-batches vs full-batch.** Same model, same number of weight updates
+  (111), same validation AUC (0.72); 1 mini-batch epoch took 2.7 s against
+  447 s for 111 full-batch epochs.
+- **No overfitting within 600 epochs on random folds.** Validation AUC rose
+  steadily: 0.81 at epoch 50, 0.87 at 300, 0.89 at 600 (the old two-layer
+  downsampled result was about 0.86). Random folds flatter this: validation
+  pixels sit next to training pixels. Expect an earlier plateau with
+  spatial folds.
+- **Validation loss is a poor early-stopping signal with downsampling.** It
+  rose from one epoch to the next in 50% of epochs. The model is trained on
+  50/50 but validated at the real 13.7%, so the loss mostly tracks how
+  inflated the probabilities are, which wobbles, while the ranking improves
+  steadily. Replaying stopping rules on the logged curve:
+
+  | Watching | Patience | Stops at | Keeps epoch | Val AUC kept |
+  |---|---|---|---|---|
+  | val loss | 10 | 45 | 35 | 0.793 |
+  | val loss | 20 | 96 | 76 | 0.821 |
+  | val loss | 50 | 374 | 324 | 0.871 |
+  | val AUC | 10 | 408 | 398 | 0.880 |
+  | val AUC | 20+ | did not stop | 599 | 0.892 |
+
+  Validation AUC fell from one epoch to the next in 38% of epochs.
+- **Decided: early stopping watches validation ROC AUC** (also the metric
+  for picking hyperparameters), `patience: 30`, `max_epochs: 1000` as a
+  time cap. Run time is not a constraint (overnight or weekend runs are
+  fine). With all validation metrics logged every epoch, one epoch takes
+  about 1.1 s on the laptop CPU, so about 19 minutes per fold at 1000.

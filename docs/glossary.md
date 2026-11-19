@@ -12,7 +12,10 @@ and the nearest R or statistics idea. Add a row whenever a new term comes up.
 | Feature / predictor | One input variable, e.g. `tcc` | `variables:` in `configs/data.yaml` | covariate, explanatory variable |
 | Label / target | The answer the model should predict | `burned01` | response variable `y` |
 | Dataset | Object that answers "how many samples?" and "give me sample i" | `data/datasets.py` | |
-| DataLoader | Draws shuffled mini-batches from a Dataset | `train/loop.py` | |
+| Tensor | PyTorch's array: like a numpy array, but it can live on a GPU and remembers the calculations done on it, for the gradients | everywhere in training | an R array |
+| `TensorDataset` | Ready-made Dataset that bundles matching tensors: sample i is row i of each | `pixel_dataset` | `cbind()`-ed columns of one table |
+| DataLoader | Deals a Dataset out in mini-batches, one per step of a for loop | `batch_loader` | `for (rows in chunks) table[rows, ]` |
+| Sampler (`RandomSampler`, `BatchSampler`) | Decides the order rows are visited in (random or as they are) and cuts it into batches | `batch_loader` | `sample()`, then `split()` |
 | Batch / mini-batch | A handful of samples processed together before one weight update. Full-batch = all data at once, as in the old code | `batch_size` in experiment configs | |
 | Epoch | One full pass through the training data | `max_epochs` | one iteration over all rows |
 | Class imbalance | Far more of one class than the other (here about 6 unburned per burned pixel) | | rare-event data |
@@ -52,7 +55,7 @@ and the nearest R or statistics idea. Add a row whenever a new term comes up.
 | Optimizer, Adam | Uses the gradients to update the weights (`optimizer.step()`). Adam adapts the step size for each weight | `train/loop.py` | `optim()`, but in many small steps on mini-batches |
 | Learning rate | Size of each update step. Too big: training jumps around; too small: slow | `learning_rate` | step size |
 | Overfitting | The model memorises the training data and does worse on new data. Seen when validation loss rises while training loss keeps falling | | |
-| Early stopping, patience | Stop when validation loss hasn't improved for `patience` epochs, and keep the best weights | `patience` | |
+| Early stopping, patience | Stop when the validation score (here ROC AUC) hasn't improved for `patience` epochs, and go back to the best epoch's weights | `fit`, `patience` | |
 | Hyperparameter | A setting we choose rather than the model learning it: hidden size, dropout, learning rate, batch size | `configs/experiments/` | tuning parameter |
 | Grid search | Try every combination of hyperparameter values | lists in experiment configs | `expand.grid()` + a loop |
 | Seed | Fixed starting point for random numbers, so runs are reproducible | `1984` | `set.seed()` |

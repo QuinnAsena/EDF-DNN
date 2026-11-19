@@ -13,8 +13,8 @@ model:
 training:
   learning_rate: [1.0e-3, 5.0e-4, 1.0e-4]
   batch_size: 4096
-  max_epochs: 1000
-  patience: 50                   # early stopping
+  max_epochs: 1000               # a time cap: ~1 s per epoch on the laptop CPU (hidden 128)
+  patience: 30                   # stop after 30 epochs without a better validation ROC AUC
   imbalance: downsample          # downsample | pos_weight | none
 
 device: auto                     # auto = GPU if available, else CPU

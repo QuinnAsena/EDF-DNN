@@ -39,10 +39,10 @@ says what will go there.
 | `data/grid.py` | Opens the rasters, selects bands by name, crops historical to the future grid, gives every pixel a `cell_id` and x/y |
 | `data/blocks.py` | Spatial blocks and cross-validation folds (which pixels train, which validate) |
 | `data/normalise.py` | Save and load the `MinMaxScaler` fitted on training pixels (`scaler.pkl` in each run) |
-| `data/datasets.py` | PyTorch Datasets: one pixel per sample (MLP) or one patch per sample (CNN, U-Net) |
+| `data/datasets.py` | Pixels to tensors (`pixel_dataset`) and mini-batches (`batch_loader`); later one patch per sample for the CNN and U-Net |
 | `models/mlp.py` | The MLPs from geocomp-2025 (single, two-layer, tapered) |
 | `models/cnn.py`, `models/unet.py` | Patch CNN and U-Net |
-| `train/loop.py` | Training and validation: one epoch of training, evaluation, early stopping |
+| `train/loop.py` | `choose_device`, `train_one_epoch`, `predict` (per-pixel probabilities), `fit` (early stopping on validation ROC AUC) |
 | `train/metrics.py` | One function for all metrics (ROC AUC, average precision, Brier and its skill score, log loss, recall, specificity, precision, TSS) |
 | `train/run.py` | The one command that runs an experiment from its config file |
 | `predict.py` | Applies a trained run to the future grid and writes a GeoTIFF |
