@@ -92,3 +92,26 @@ def test_evaluation_batches_keep_table_order():
     batches = [cell_ids.tolist() for _, _, cell_ids in loader]
 
     assert batches == [[101, 102, 103, 104], [105, 106, 107, 108], [109, 110]]
+
+
+def test_loader_counts_its_batches():
+    # 10 pixels in batches of 4: 4 + 4 + 2, so three batches per epoch
+    assert len(batch_loader(make_dataset(), batch_size=4, shuffle=True)) == 3
+
+
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="needs a GPU")
+def test_dataset_on_the_gpu_gives_gpu_batches_with_pixels_together():
+    torch.manual_seed(1984)
+    dataset = pixel_dataset(TABLE, ["elevation"], SCALER, device="cuda")
+    batches = list(batch_loader(dataset, batch_size=4, shuffle=True))
+
+    # Batches are cut on the GPU, so nothing is copied per batch
+    assert all(tensor.device.type == "cuda" for batch in batches for tensor in batch)
+    # ...and each pixel still keeps its own label and cell_id
+    for features, labels, cell_ids in batches:
+        elevations = SCALER.inverse_transform(features.cpu().numpy()).ravel()
+        assert elevations.round().tolist() == (cell_ids.cpu() * 10).tolist()
+        assert labels.cpu().tolist() == (cell_ids.cpu() % 2 == 0).float().tolist()
+    order = [cell_id for _, _, cell_ids in batches for cell_id in cell_ids.tolist()]
+    assert sorted(order) == list(range(101, 111))
+

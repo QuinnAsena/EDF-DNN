@@ -281,3 +281,31 @@ wording fixes. For the `run.py` design:
   directory (cluster jobs start elsewhere).
 - A fold's best-epoch validation AUC is slightly optimistic (the best of many
   epochs on that fold); only the held-out test score is unbiased.
+
+## Faster mini-batches: data on the training device (2026-11-21)
+
+- **Where a GPU epoch went.** The benchmark (README, Benchmarks) showed that
+  most of a GPU epoch was spent fetching batches: the `DataLoader` gathered
+  each batch's rows from the table in the CPU's memory and the batch was then
+  copied to the GPU. The GPU's own work was about a fifth of the epoch (0.04 of
+  0.19 s, downsampled, hidden 256, batch 4096).
+- **Now the table lives on the device.** `pixel_dataset(..., device=device)`
+  puts it on the GPU once (563,475 pixels x 25 predictors is about 60 MB), and
+  `batch_loader` returns a small `BatchLoader` that draws the shuffled order
+  with `torch.randperm` on that device and cuts each batch with one indexing
+  step per tensor. No `DataLoader`, sampler or per-batch copy. This replaces
+  the `BatchSampler` route of 2026-11-19, and is a little faster on the CPU too.
+- `train_one_epoch` adds up the loss on the device and reads it once per epoch
+  (`loss.item()` after every batch makes the CPU wait for the GPU each time);
+  `predict` copies predictions back to the CPU once, not per batch.
+- **Result:** at batch 4096 a GPU epoch is 1.5-2.4x faster, at 16384 2.4-3.4x;
+  on the CPU up to 1.3x. At batch 1024 no reliable change: every step costs
+  the CPU about 3 ms to send its ~50 small operations to the GPU, whatever the
+  batch size, so small batches stay slow.
+- **Shuffling is still seeded by `torch.manual_seed`**, but the order now comes
+  from the random numbers of the device the data are on, so the same seed gives
+  a different order on the GPU than on the CPU, and a different order than the
+  old `DataLoader` did. Only matters when comparing runs across devices.
+- **Tried, not adopted:** fused Adam (`Adam(fused=True)`) gave no consistent
+  gain. `torch.compile` or CUDA graphs could cut the per-step overhead at small
+  batches, at the cost of complexity; worth a look for the CNN if needed.

@@ -29,6 +29,7 @@ stratified folds as before, so the old AUCs are a fair check (see NOTES.md,
 - [x] `data/datasets.py`: `pixel_dataset` (a `TensorDataset`) + `batch_loader`, instead of a `PixelDataset` class
 - [x] `train/loop.py`: `choose_device`, `train_one_epoch`, `predict`, `fit` (early stopping on validation ROC AUC, patience 30, max 1000 epochs)
 - [ ] `train/run.py`: held-out test set + stratified k-fold, run folders with `overwrite`; save per-pixel predictions (`cell_id`, label, probability) so curves and new metrics need no retraining
+  - build the datasets with `pixel_dataset(..., device=device)`, so batches are cut on the GPU (NOTES, 2026-11-21)
 - [ ] Old MLP variants as experiment configs; compare with the old AUCs
 
 ## After the MLPs run: imbalance as an ensemble

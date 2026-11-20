@@ -5,7 +5,9 @@ Usage:
 
 Prints one table per training set (downsampled, full): median seconds per
 epoch for every device / thread count, model width and batch size, then the
-GPU speed-up over the best CPU setting.
+GPU speed-up over the best CPU setting, then (if
+benchmarks/results_before_optimisation.csv exists) the epoch times before and
+after the data-path optimisation, at the experiment config's batch size.
 """
 
 from pathlib import Path
@@ -13,6 +15,7 @@ from pathlib import Path
 import pandas as pd
 
 RESULTS = Path(__file__).with_name("results.csv")
+BEFORE = Path(__file__).with_name("results_before_optimisation.csv")
 
 
 def device_label(row):
@@ -46,5 +49,31 @@ def main():
               f"(batch 4,096: {speedup.xs(4096, level='batch').min():.1f}x to {speedup.xs(4096, level='batch').max():.1f}x)\n")
 
 
+def before_after(batch=4096):
+    """Seconds per epoch before and after the optimisation, at one batch size."""
+    keys = ["setting", "imbalance", "hidden"]
+    tables = []
+    for path in (BEFORE, RESULTS):
+        frame = pd.read_csv(path)
+        frame["setting"] = frame.apply(device_label, axis=1)
+        tables.append(frame[frame.batch == batch].set_index(keys).epoch_s)
+    both = pd.concat(tables, axis=1, keys=["before", "after"]).dropna()
+    order = list(dict.fromkeys(pd.read_csv(RESULTS).sort_values(["device", "threads"])
+                               .apply(device_label, axis=1)))
+    print(f"**Before and after the data-path optimisation** (batch {batch:,}): seconds per epoch\n")
+    print("| | downsampled, hidden 128 | downsampled, hidden 256 | full, hidden 128 | full, hidden 256 |")
+    print("|---|---|---|---|---|")
+    for setting in order:
+        cells = []
+        for imbalance in ("downsample", "full"):
+            for hidden in (128, 256):
+                b, a = both.loc[(setting, imbalance, hidden)]
+                cells.append(f"{b:.2f} → {a:.2f} ({b / a:.1f}x)")
+        print(f"| {setting} | " + " | ".join(cells) + " |")
+    print()
+
+
 if __name__ == "__main__":
     main()
+    if BEFORE.exists():
+        before_after()

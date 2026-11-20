@@ -40,7 +40,7 @@ says what will go there.
 | `data/grid.py` | Opens the rasters, selects bands by name, crops historical to the future grid, gives every pixel a `cell_id` and x/y |
 | `data/blocks.py` | Spatial blocks and cross-validation folds (which pixels train, which validate) |
 | `data/normalise.py` | Save and load the `MinMaxScaler` fitted on training pixels (`scaler.pkl` in each run) |
-| `data/datasets.py` | Pixels to tensors (`pixel_dataset`) and mini-batches (`batch_loader`); later one patch per sample for the CNN and U-Net |
+| `data/datasets.py` | Pixels to tensors on the training device (`pixel_dataset`) and mini-batches cut there (`batch_loader`); later one patch per sample for the CNN and U-Net |
 | `models/mlp.py` | The MLPs from geocomp-2025 (single, two-layer, tapered) |
 | `models/cnn.py`, `models/unet.py` | Patch CNN and U-Net |
 | `train/loop.py` | `choose_device`, `train_one_epoch`, `predict` (per-pixel probabilities), `fit` (early stopping on validation ROC AUC) |
@@ -68,7 +68,9 @@ allowed to see.
   `pixi run test`. If they pass, the code still does what it promised.
 - **`benchmarks/`**: how long a training epoch takes on CPU and GPU, on
   synthetic data shaped like the real grid. `bench_training.py` runs it,
-  `results.csv` holds the timings, `summarise.py` makes the README tables.
+  `results.csv` holds the timings, `results_before_optimisation.csv` the
+  timings before the data-path change of 2026-11-21, and `summarise.py` makes
+  the README tables.
 - **`manual_zone/`**: mine. `scratch/` holds scripts for stepping through code
   line by line and checking it on the real data; `reference/` holds the old
   code we port from.

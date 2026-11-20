@@ -24,7 +24,9 @@ Usage:
 
 Each setting runs one warm-up epoch (the first epoch pays one-off costs, such
 as allocating memory), then the median of --repeats timed epochs is reported.
-Results are appended to benchmarks/results.csv.
+Results are appended to benchmarks/results.csv. The timings from before the
+data-path optimisation (DataLoader with a BatchSampler, data on the CPU) are
+kept in benchmarks/results_before_optimisation.csv.
 """
 
 import argparse
@@ -119,7 +121,8 @@ def main():
     training_all, validation = split(table)
     scaler = MinMaxScaler().fit(training_all[VARIABLES])          # training pixels only
     training_sets = {"downsample": downsample(training_all), "full": training_all}
-    validation_set = pixel_dataset(validation, VARIABLES, scaler)
+    # Datasets live where the model does (pixel_dataset(device=...)), so batches are cut there
+    validation_set = pixel_dataset(validation, VARIABLES, scaler, device=device)
     thread_settings = args.threads if device.type == "cpu" else [torch.get_num_threads()]
     gpu_name = torch.cuda.get_device_name(0) if device.type == "cuda" else ""
 
@@ -128,7 +131,7 @@ def main():
         writer = None
         for imbalance in args.imbalance:
             training = training_sets[imbalance]
-            training_set = pixel_dataset(training, VARIABLES, scaler)
+            training_set = pixel_dataset(training, VARIABLES, scaler, device=device)
             burned = training.burned01.mean()
             # pos_weight = unburned / burned: each burned pixel counts as much as
             # all the unburned ones together, the alternative to downsampling

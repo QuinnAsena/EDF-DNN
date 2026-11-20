@@ -38,18 +38,24 @@ def train_one_epoch(model, loader, loss_function, optimizer, device):
     Returns the mean training loss over the epoch's pixels.
     """
     model.train()   # training mode: dropout on
-    total_loss, pixel_count = 0.0, 0
+    # The running total stays on the device: loss.item() on every batch would
+    # make the CPU wait for the GPU each time, stalling it between batches.
+    # Reading the total once, at the end, costs one wait per epoch.
+    total_loss = torch.zeros((), device=device)
+    pixel_count = 0
     for features, labels, _ in loader:   # cell_ids are not needed for training
+        # .to(device) is free when the dataset already lives there (pixel_dataset(device=...))
         features, labels = features.to(device), labels.to(device)
         optimizer.zero_grad()                     # clear the last batch's gradients
         logits = model(features).squeeze(1)       # one logit per pixel: (batch, 1) -> (batch,)
         loss = loss_function(logits, labels)      # how wrong, on average, on this batch
         loss.backward()                           # gradients: which way to move each weight
         optimizer.step()                          # move every weight a small step that way
-        # Weight each batch's loss by its size (the last batch is smaller)
-        total_loss += loss.item() * len(labels)
+        # Weight each batch's loss by its size (the last batch is smaller);
+        # detach() keeps the total out of the gradient bookkeeping
+        total_loss += loss.detach() * len(labels)
         pixel_count += len(labels)
-    return total_loss / pixel_count
+    return total_loss.item() / pixel_count
 
 
 def predict(model, loader, device):
@@ -59,18 +65,21 @@ def predict(model, loader, device):
     pixel. This is what gets saved per fold, and matched back by cell_id.
     """
     model.eval()   # evaluation mode: dropout off, so predictions are repeatable
-    batches = []
+    all_logits, all_labels, all_cell_ids = [], [], []
     with torch.no_grad():   # no gradients needed when only predicting: faster, less memory
         for features, labels, cell_ids in loader:
-            logits = model(features.to(device)).squeeze(1)
-            batches.append(pd.DataFrame({
-                "cell_id": cell_ids.numpy(),
-                "label": labels.numpy(),
-                # sigmoid turns logits into probabilities, like plogis() in R;
-                # .cpu() brings them back from the GPU (no-op on the CPU)
-                "probability": torch.sigmoid(logits).cpu().numpy(),
-            }))
-    return pd.concat(batches, ignore_index=True)   # stack the batches, like do.call(rbind, ...)
+            all_logits.append(model(features.to(device)).squeeze(1))
+            all_labels.append(labels)
+            all_cell_ids.append(cell_ids)
+    # Stack the batches (like do.call(rbind, ...)) and bring them back to the CPU
+    # once, rather than building a small table per batch: on a GPU each batch's
+    # copy back would make the CPU wait for the GPU.
+    return pd.DataFrame({
+        "cell_id": torch.cat(all_cell_ids).cpu().numpy(),
+        "label": torch.cat(all_labels).cpu().numpy(),
+        # sigmoid turns logits into probabilities, like plogis() in R
+        "probability": torch.sigmoid(torch.cat(all_logits)).cpu().numpy(),
+    })
 
 
 def fit(model, training_loader, validation_loader, loss_function, optimizer, device,
