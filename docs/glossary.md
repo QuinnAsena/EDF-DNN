@@ -13,8 +13,8 @@ and the nearest R or statistics idea. Add a row whenever a new term comes up.
 | Label / target | The answer the model should predict | `burned01` | response variable `y` |
 | Dataset | Object that answers "how many samples?" and "give me sample i" | `data/datasets.py` | |
 | `TensorDataset` | Ready-made Dataset that bundles matching tensors: sample i is row i of each | `pixel_dataset` | `cbind()`-ed columns of one table |
-| DataLoader | Deals a Dataset out in mini-batches, one per step of a for loop | `batch_loader` | `for (rows in chunks) table[rows, ]` |
-| Sampler (`RandomSampler`, `BatchSampler`) | Decides the order rows are visited in (random or as they are) and cuts it into batches | `batch_loader` | `sample()`, then `split()` |
+| DataLoader | PyTorch's general tool that deals a Dataset out in mini-batches, one per step of a for loop. For tables that fit in memory we use our own, faster `BatchLoader` instead (NOTES, 2026-11-21) | `batch_loader` returns a `BatchLoader` | `for (rows in chunks) table[rows, ]` |
+| Sampler (`RandomSampler`, `BatchSampler`) | Decides the order rows are visited in (random or as they are) and cuts it into batches. `BatchLoader` does the same with `torch.randperm` or `torch.arange`, then slices | `BatchLoader` | `sample()`, then `split()` |
 | Batch / mini-batch | A handful of samples processed together before one weight update. Full-batch = all data at once, as in the old code | `batch_size` in experiment configs | |
 | Epoch | One full pass through the training data. With batches of 4096 that is about 111 weight updates; in the old full-batch code it was 1 | `max_epochs` | one iteration over all rows |
 | Class imbalance | Far more of one class than the other (here about 6 unburned per burned pixel) | | rare-event data |
@@ -61,6 +61,8 @@ and the nearest R or statistics idea. Add a row whenever a new term comes up.
 | Checkpoint, `state_dict` | The saved weights of a trained model (`.pt` file) | `runs/<experiment>/` | `saveRDS(model)` |
 | `torch.no_grad()` | Switches off gradient tracking when only predicting: faster, less memory | `train/loop.py` | |
 | Device, GPU, CUDA | Where tensors and computations live. GPU = graphics card, much faster for networks; CUDA = NVIDIA's GPU platform | `device: auto`, `choose_device` | |
+| Launch overhead, host-to-device copy | Every GPU operation is sent to the GPU by the CPU, a few microseconds each; copying data from main memory to the GPU ("host to device") costs more. For a small network these, not the GPU's arithmetic, set the speed, which is why the pixel table is put on the GPU once | `pixel_dataset(device=...)` | |
+| Warm-up epoch, `torch.cuda.synchronize()` | When timing, the first epoch is run but not counted: it pays one-off costs such as allocating memory. GPU work runs in the background, so `synchronize()` waits for it to finish before the clock is read | `benchmarks/bench_training.py` | `system.time()` after a first untimed call |
 
 ## Validation and evaluation
 

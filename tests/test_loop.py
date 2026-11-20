@@ -3,6 +3,7 @@
 Run with:  pixi run test
 """
 
+import pytest
 import torch
 from torch.utils.data import TensorDataset
 
@@ -97,3 +98,23 @@ def test_fit_runs_to_max_epochs_while_improving():
     assert len(history) == 4
     # Every validation metric is logged, with a validation_ prefix
     assert {"training_loss", "validation_roc_auc", "validation_log_loss"} <= set(history.columns)
+
+
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="needs a GPU")
+def test_training_and_predicting_with_the_data_on_the_gpu():
+    gpu = torch.device("cuda")
+    features, burned, cell_ids = (tensor.to(gpu) for tensor in make_pixels())
+    training = batch_loader(TensorDataset(features, burned, cell_ids), batch_size=50, shuffle=True)
+    evaluation = batch_loader(TensorDataset(features, burned, cell_ids), batch_size=50, shuffle=False)
+    model, optimizer = make_model()
+    model.to(gpu)
+
+    losses = [train_one_epoch(model, training, torch.nn.BCEWithLogitsLoss(), optimizer, gpu)
+              for _ in range(30)]
+    predictions = predict(model, evaluation, gpu)
+
+    assert losses[-1] < losses[0] * 0.5
+    # predict hands back an ordinary table on the CPU, in the dataset's order
+    assert predictions["cell_id"].tolist() == list(range(1, 201))
+    assert predictions["probability"].between(0, 1).all()
+

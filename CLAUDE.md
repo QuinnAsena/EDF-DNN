@@ -50,8 +50,9 @@ experiments and reference code.
 - Select raster bands by name, never by position.
 - Every pixel carries `cell_id` and x/y; never link tables by row order.
 - Scaling statistics and class balancing come from training folds only.
-- Use mini-batches via DataLoader and move tensors to `device`, so code runs
-  unchanged on CPU or GPU.
+- Use mini-batches via `batch_loader` and move tensors to `device` (datasets
+  can live there from the start: `pixel_dataset(..., device=device)`), so code
+  runs unchanged on CPU or GPU.
 - Readable variable names (`hidden_size`, not `hid`), and comments that
   explain the why, including a sentence on neural-network idioms.
 - Quarto `.qmd` for reports; no Jupyter notebooks.
