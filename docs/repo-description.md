@@ -19,6 +19,7 @@ EDF-DNN/
 │   ├── train/              training loop, validation, metrics, run.py
 │   └── predict.py          trained model -> future burn-probability GeoTIFF
 ├── tests/                  automated checks (`pixi run test`)
+├── benchmarks/             training-speed benchmark on synthetic data, and its results
 ├── runs/        (gitignored)  outputs: one folder per training run
 ├── cluster_jobs/           job scripts for the NCAR cluster
 ├── reports/                Quarto .qmd reports
@@ -65,6 +66,9 @@ allowed to see.
   `runs/` and never train anything, so rendering is fast.
 - **`tests/`**: small automated checks on tiny made-up data, run with
   `pixi run test`. If they pass, the code still does what it promised.
+- **`benchmarks/`**: how long a training epoch takes on CPU and GPU, on
+  synthetic data shaped like the real grid. `bench_training.py` runs it,
+  `results.csv` holds the timings, `summarise.py` makes the README tables.
 - **`manual_zone/`**: mine. `scratch/` holds scripts for stepping through code
   line by line and checking it on the real data; `reference/` holds the old
   code we port from.

@@ -61,6 +61,7 @@ and the nearest R or statistics idea. Add a row whenever a new term comes up.
 | Checkpoint, `state_dict` | The saved weights of a trained model (`.pt` file) | `runs/<experiment>/` | `saveRDS(model)` |
 | `torch.no_grad()` | Switches off gradient tracking when only predicting: faster, less memory | `train/loop.py` | |
 | Device, GPU, CUDA | Where tensors and computations live. GPU = graphics card, much faster for networks; CUDA = NVIDIA's GPU platform | `device: auto`, `choose_device` | |
+| Warm-up epoch, `torch.cuda.synchronize()` | When timing, the first epoch is run but not counted: it pays one-off costs such as allocating memory. GPU work runs in the background, so `synchronize()` waits for it to finish before the clock is read | `benchmarks/bench_training.py` | `system.time()` after a first untimed call |
 
 ## Validation and evaluation
 
