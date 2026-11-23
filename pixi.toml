@@ -31,6 +31,7 @@ pytorch = ">=2.14,<3"
 ipykernel = ">=6.31,<8"      # lets Quarto run Python code cells in this environment
 jupyter = ">=1.1,<2"
 pytest = ">=8"               # automated tests in tests/
+pyarrow = ">=23,<24"         # parquet files (pandas to_parquet / read_parquet), for millions of rows
 
 # Install our own code (src/edf_dnn) into the environment in "editable" mode:
 # `import edf_dnn` then works from any folder, and edits to the source take

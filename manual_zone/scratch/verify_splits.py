@@ -38,7 +38,7 @@ print(len(historical_data), round(historical_data[target].mean(), 3))  # 563,475
 # `test` = the held-out test set, not used in cross-validation
 pool, test = train_test_split(historical_data, test_size=config["test_fraction"],
                               stratify=historical_data[target], random_state=seed)
-# train_test_split creates pool and test with ~equal burned vs unburned pixels
+# train_test_split creates pool and test with the same burned SHARE (13.7% each)
 # No balancing/downsampling has been done at this stage and both pool and test
 # are majority unburned
 print(len(pool), len(test))                    # 507,127 and 56,348: a 90/10 split

@@ -41,7 +41,7 @@ says what will go there.
 | `data/splits.py` | Which pixels are used for what: held-out test set, cross-validation folds (random, stratified), downsampling |
 | `data/blocks.py` | Later: spatial blocks as folds, replacing the random folds |
 | `data/normalise.py` | Save and load the `MinMaxScaler` fitted on training pixels (`scaler.pkl` in each run) |
-| `data/datasets.py` | Pixels to tensors (`pixel_dataset`) and mini-batches (`batch_loader`); later one patch per sample for the CNN and U-Net |
+| `data/batching.py` | Pixels to tensors (`pixel_dataset`) and mini-batches (`batch_loader`); later one patch per sample for the CNN and U-Net |
 | `models/mlp.py` | The MLPs from geocomp-2025 (single, two-layer, tapered) |
 | `models/cnn.py`, `models/unet.py` | Patch CNN and U-Net |
 | `train/loop.py` | `choose_device`, `train_one_epoch`, `predict_probabilities` (per-pixel probabilities), `fit` (early stopping on validation ROC AUC) |
@@ -80,7 +80,7 @@ configs/experiments/x.yaml
 train/run.py ── data/grid.py ─────── rasters in data/
         │       data/splits.py       test set, folds, downsampling
         │       data/normalise.py    scaling from training pixels only
-        │       data/datasets.py     pixels or patches as tensors
+        │       data/batching.py     pixels or patches as tensors, in mini-batches
         │       models/...           the network
         │       train/loop.py        fit, validate, early stopping
         │       train/metrics.py     scores

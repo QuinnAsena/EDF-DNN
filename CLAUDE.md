@@ -32,7 +32,7 @@ experiments and reference code.
 
 | Path | Purpose |
 |---|---|
-| `src/edf_dnn/data/` | raster reading by band name, test set and folds, Datasets, scaling |
+| `src/edf_dnn/data/` | raster reading by band name, test set and folds, scaling, batching (Datasets and loaders) |
 | `src/edf_dnn/models/` | architectures; all return raw logits |
 | `src/edf_dnn/train/` | training loop, metrics, `run.py` entry point |
 | `src/edf_dnn/predict.py` | trained run -> future burn-probability GeoTIFF |

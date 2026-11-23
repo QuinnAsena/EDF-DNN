@@ -318,3 +318,36 @@ wording fixes. For the `run.py` design:
 - `mlp_baseline.yaml` was renamed `mlp_two_layer.yaml`; a test checks that
   every config's `name` matches its file name, so two configs can never
   write to the same run folder.
+
+## run.py, step (b) (2026-11-23)
+
+- **What it does:** `grid_settings` expands the config lists with sklearn's
+  `ParameterGrid` (12 settings for the MLP grids); `train_one_fold` is
+  `walkthrough_mlp.py` sections 3-7 as a function; `cross_validate` runs
+  every setting on every fold. The architecture is looked up by its config
+  name in `edf_dnn.models` (`get_architecture`).
+- **Seed reset before every model** (`torch.manual_seed` inside
+  `train_one_fold`), so each setting and fold gives the same result whatever
+  runs before it, and can be rerun alone (later: one cluster job each).
+- **Files:** `cv_folds.csv` (one row per setting and fold, including
+  `epochs_run`, to spot runs that hit `max_epochs`), `cv_results.csv` (one
+  row per setting: mean and sd of every validation metric, median and mean
+  best epoch, `folds_done`; best mean ROC AUC first), `cv_history.csv`
+  (every epoch) and `cv_predictions.parquet` (every validation pixel, per
+  setting: about 5 MB per setting).
+- **Parquet, not CSV, for predictions** (507,127 rows per setting): smaller,
+  faster, keeps types, and R reads it with `arrow::read_parquet()`.
+  `pyarrow` added to `pixi.toml`.
+- **Crash guard:** the cv_ files are rewritten after every fold, so a crash
+  loses only the fold in progress. No resume yet (later, with job arrays).
+- **Tests and mutants:** six realistic bugs (no reseed, folds swapped,
+  scaler fitted on validation, scaler fitted after downsampling, saving
+  only at the end, best setting sorted last) are each caught by a test.
+- **dev_quick end to end on the real data:** 3.5 minutes; fold 1 ROC AUC
+  0.781, identical to `walkthrough_mlp.py`, so run.py reproduces the hand
+  version. About 1.8 s per epoch at hidden size 256 (each epoch also scores
+  101,400 validation pixels). If early stopping never triggers, a fold takes
+  up to ~30 min (hidden 256) or ~19 min (hidden 128), so the two-layer grid
+  could take about a day; the three grids together may not fit one weekend.
+- **Rename:** `data/datasets.py` -> `data/batching.py` (and its test file):
+  "datasets" read like the input data, not PyTorch's Dataset objects.

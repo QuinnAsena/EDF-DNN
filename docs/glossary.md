@@ -8,10 +8,10 @@ and the nearest R or statistics idea. Add a row whenever a new term comes up.
 | Term | Plain meaning | In our code | R / stats analogy |
 |---|---|---|---|
 | Tensor | PyTorch's array: numbers in any number of dimensions, like a numpy array. It can live on a GPU, and remembers the calculations done on it, for the gradients | everything that goes into a model | `array()`, `matrix()` |
-| Sample | One example the model learns from: a pixel (MLP) or a patch (CNN) | `data/datasets.py` | one row of a data frame |
+| Sample | One example the model learns from: a pixel (MLP) or a patch (CNN) | `data/batching.py` | one row of a data frame |
 | Feature / predictor | One input variable, e.g. `tcc` | `variables:` in `configs/data.yaml` | covariate, explanatory variable |
 | Label / target | The answer the model should predict | `burned01` | response variable `y` |
-| Dataset | Object that answers "how many samples?" and "give me sample i" | `data/datasets.py` | |
+| Dataset | Object that answers "how many samples?" and "give me sample i" | `data/batching.py` | |
 | `TensorDataset` | Ready-made Dataset that bundles matching tensors: sample i is row i of each | `pixel_dataset` | `cbind()`-ed columns of one table |
 | DataLoader | Deals a Dataset out in mini-batches, one per step of a for loop | `batch_loader` | `for (rows in chunks) table[rows, ]` |
 | Sampler (`RandomSampler`, `BatchSampler`) | Decides the order rows are visited in (random or as they are) and cuts it into batches | `batch_loader` | `sample()`, then `split()` |
@@ -23,6 +23,7 @@ and the nearest R or statistics idea. Add a row whenever a new term comes up.
 | Scaling / normalisation | Rescale each variable to a similar range (0-1, or mean 0 and sd 1) so no variable dominates just by its units | `data/normalise.py` | `scale()` |
 | Min-max scaling | (x - min) / (max - min), with min and max from the training pixels, so those span 0-1. Squashed by extreme values: heavily skewed variables need a log first | `MinMaxScaler`, saved by `save_scaler` | `scales::rescale()` |
 | Pickle | Python's way of saving any object to a file and loading it back unchanged | `scaler.pkl` | `saveRDS()` / `readRDS()` |
+| Parquet | A compressed, column-by-column table file that keeps column types; much smaller and faster than CSV for millions of rows | `cv_predictions.parquet` | `arrow::read_parquet()` |
 | float32 / float64 | Single (about 7 digits) and double (about 16 digits) precision numbers. Networks compute in float32: half the memory, ample precision | rasters are float32 | R numerics are always float64 |
 | Data leakage | Information from validation or test data getting into training (e.g. a scaler fitted on all data), which makes scores look better than they are. Every step that learns from data (scaling, choosing predictors) happens inside the folds, on the training part only (Hastie, Tibshirani & Friedman 2009, section 7.10.2, "The wrong and right way to do cross-validation") | why folds and scaling sit in `data/` | `recipes`: `prep()` on training, `bake()` on new data |
 
@@ -56,8 +57,8 @@ and the nearest R or statistics idea. Add a row whenever a new term comes up.
 | Overfitting | The model memorises the training data and does worse on new data. Seen when validation loss rises while training loss keeps falling | | |
 | Early stopping, patience | Stop when the validation score (here ROC AUC) hasn't improved for `patience` epochs, and go back to the best epoch's weights | `fit`, `patience` | |
 | Hyperparameter | A setting we choose rather than the model learning it: hidden size, dropout, learning rate, batch size | `configs/experiments/` | tuning parameter |
-| Grid search | Try every combination of hyperparameter values | lists in experiment configs | `expand.grid()` + a loop |
-| Seed | Fixed starting point for random numbers, so runs are reproducible | `1984` | `set.seed()` |
+| Grid search | Try every combination of hyperparameter values, each on every fold; the best mean validation ROC AUC wins | lists in experiment configs; `grid_settings` (sklearn `ParameterGrid`) and `cross_validate` in `train/run.py` | `expand.grid()` + a loop |
+| Seed | Fixed starting point for random numbers, so runs are reproducible. Reset before every model, so each setting and fold can be rerun on its own | `1984`; `torch.manual_seed` in `train_one_fold` | `set.seed()` |
 | Checkpoint, `state_dict` | The saved weights of a trained model (`.pt` file) | `runs/<experiment>/` | `saveRDS(model)` |
 | `torch.no_grad()` | Switches off gradient tracking when only predicting: faster, less memory | `train/loop.py` | |
 | Device, GPU, CUDA | Where tensors and computations live. GPU = graphics card, much faster for networks; CUDA = NVIDIA's GPU platform | `device: auto`, `choose_device` | |
@@ -101,7 +102,7 @@ scores once on test.
 
 | Term | Plain meaning | In our code | R / stats analogy |
 |---|---|---|---|
-| Patch | A square window of pixels (variables x height x width) around a location; the input of the CNN | `data/datasets.py` | `terra::crop()` around one cell |
+| Patch | A square window of pixels (variables x height x width) around a location; the input of the CNN | `data/batching.py` | `terra::crop()` around one cell |
 | Channel | One layer of the input stack; our variables are the input channels | | one raster layer |
 | Convolution, kernel / filter | Slide a small window of learned weights across the map; each output pixel is a weighted sum of its neighbourhood | `models/cnn.py` | `terra::focal(r, w = matrix)`, with `w` learned |
 | Feature map | The output of a convolution: a derived raster the network learned to compute | | a derived layer |

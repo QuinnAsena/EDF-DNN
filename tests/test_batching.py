@@ -1,4 +1,4 @@
-"""Tests for edf_dnn.data.datasets, on ten made-up pixels.
+"""Tests for edf_dnn.data.batching, on ten made-up pixels.
 
 Run with:  pixi run test
 """
@@ -8,7 +8,7 @@ import pytest
 import torch
 from sklearn.preprocessing import MinMaxScaler
 
-from edf_dnn.data.datasets import batch_loader, pixel_dataset
+from edf_dnn.data.batching import batch_loader, pixel_dataset
 
 # Ten pixels built so every row can be checked: elevation = 10 x cell_id,
 # and the even cell_ids burned

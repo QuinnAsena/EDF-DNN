@@ -1,4 +1,4 @@
-"""PyTorch datasets and loaders: how pixels reach the network in mini-batches.
+"""How pixels reach the network: PyTorch Datasets and mini-batch loaders.
 
 Contents
 --------

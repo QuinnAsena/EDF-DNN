@@ -6,7 +6,7 @@ Run with:  pixi run test
 import torch
 from torch.utils.data import TensorDataset
 
-from edf_dnn.data.datasets import batch_loader
+from edf_dnn.data.batching import batch_loader
 from edf_dnn.models.mlp import FeedforwardSingle
 from edf_dnn.train.loop import choose_device, fit, predict_probabilities, train_one_epoch
 from edf_dnn.train.metrics import compute_metrics

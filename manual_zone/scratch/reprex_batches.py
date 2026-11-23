@@ -13,7 +13,7 @@ import pandas as pd
 import torch
 from sklearn.preprocessing import MinMaxScaler
 
-from edf_dnn.data.datasets import batch_loader, pixel_dataset
+from edf_dnn.data.batching import batch_loader, pixel_dataset
 
 # ---------------------------------------------------------------------------
 # 1. Ten pixels, built so every row can be checked by eye:

@@ -50,7 +50,7 @@ training_values = scaler.transform(training[variables])
 print(training_values.shape, training_values.dtype)       # (405701, 25) float32
 # Careful: numpy's .min() and .max() reduce over ALL values at once, giving
 # one number each, not one per variable (that needs .min(axis=0), like
-# apply(m, 2, min) in R, or the ranges() historical_data above)
+# apply(m, 2, min) in R, or the ranges() table above)
 print(training_values.min(), training_values.max())       # 0.0 1.0: the whole array
 print(ranges(training_values))                            # per variable: each 0 to 1 (0.9999999 is float32 rounding)
 
@@ -74,7 +74,7 @@ flowacc = training_values[:, variables.index("flowacc_1km")]
 print(np.quantile(flowacc, [0.5, 0.9, 0.99]))           # ~0.00001, 0.0005, 0.06
 
 # ---------------------------------------------------------------------------
-# 6. Save and load, as run.py and predict.py will
+# 5. Save and load, as run.py and predict.py will
 # ---------------------------------------------------------------------------
 with tempfile.TemporaryDirectory() as run_dir:          # a throwaway folder
     save_scaler(scaler, run_dir)

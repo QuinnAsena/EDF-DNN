@@ -18,7 +18,7 @@ import torch
 import yaml
 from sklearn.preprocessing import MinMaxScaler
 
-from edf_dnn.data.datasets import batch_loader, pixel_dataset
+from edf_dnn.data.batching import batch_loader, pixel_dataset
 from edf_dnn.data.grid import crop_to_grid, open_stack, to_pixel_table
 from edf_dnn.data.splits import assign_folds, downsample, hold_out_test
 from edf_dnn.models.mlp import FeedforwardTwo
