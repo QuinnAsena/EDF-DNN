@@ -100,13 +100,13 @@ def main(experiment_path):
     target, seed = data["target"], data["random_seed"]
     run_dir = prepare_run_folder(experiment, data)
 
-    table = load_pixel_table(data)
-    pool, test = hold_out_test(table, target, data["test_fraction"], seed)
+    historical_data = load_pixel_table(data)
+    pool, test = hold_out_test(historical_data, target, data["test_fraction"], seed)
     pool["fold"] = assign_folds(pool, target, data["n_folds"], seed)
     save_splits(pool, test, run_dir)
 
     print(f"Run folder: {run_dir}")
-    print(f"Pixels: {len(table):,}; test {len(test):,} (burned {test[target].mean():.3f}), "
+    print(f"Pixels: {len(historical_data):,}; test {len(test):,} (burned {test[target].mean():.3f}), "
           f"cross-validation pool {len(pool):,} (burned {pool[target].mean():.3f})")
     print(pool.groupby("fold")[target].agg(pixels="size", burned_share="mean").round(3))
     # Steps (b) and (c) follow here: grid search over the folds, then the final model

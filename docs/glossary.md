@@ -24,7 +24,7 @@ and the nearest R or statistics idea. Add a row whenever a new term comes up.
 | Min-max scaling | (x - min) / (max - min), with min and max from the training pixels, so those span 0-1. Squashed by extreme values: heavily skewed variables need a log first | `MinMaxScaler`, saved by `save_scaler` | `scales::rescale()` |
 | Pickle | Python's way of saving any object to a file and loading it back unchanged | `scaler.pkl` | `saveRDS()` / `readRDS()` |
 | float32 / float64 | Single (about 7 digits) and double (about 16 digits) precision numbers. Networks compute in float32: half the memory, ample precision | rasters are float32 | R numerics are always float64 |
-| Data leakage | Information from validation or test data getting into training (e.g. a scaler fitted on all data), which makes scores look better than they are | why folds and scaling sit in `data/` | |
+| Data leakage | Information from validation or test data getting into training (e.g. a scaler fitted on all data), which makes scores look better than they are. Every step that learns from data (scaling, choosing predictors) happens inside the folds, on the training part only (Hastie, Tibshirani & Friedman 2009, section 7.10.2, "The wrong and right way to do cross-validation") | why folds and scaling sit in `data/` | `recipes`: `prep()` on training, `bake()` on new data |
 
 ## Network building blocks
 
@@ -64,10 +64,23 @@ and the nearest R or statistics idea. Add a row whenever a new term comes up.
 
 ## Validation and evaluation
 
+How the historical pixels are divided up (random stratified folds for now):
+
+```
+historical_data (all 563,475 pixels)
+├── test (10%)    held out, scored once at the very end
+└── pool (90%)    split into 5 folds; 5 rounds, each fold validates once
+    ├── training (4 folds)    learns the weights (downsampled to 50/50)
+    └── validation (1 fold)   early stopping and choosing settings
+```
+
+After the 5 rounds, the chosen setting retrains on the whole pool, then
+scores once on test.
+
 | Term | Plain meaning | In our code | R / stats analogy |
 |---|---|---|---|
-| Training / validation / test set | Fit on training; pick hyperparameters and stop early on validation; report once on test (the held-out 10%) | `hold_out_test`, `assign_folds` in `data/splits.py` | |
-| Cross-validation, fold, k | Split the data into k folds; each fold takes a turn as validation | `n_folds` | `rsample::vfold_cv()`, `caret` |
+| Training / validation / test set | Fit on training; pick hyperparameters and stop early on validation; report once on test (the held-out 10%). The validation scores helped make those choices, so they run slightly optimistic; the test score is the unbiased one (Hastie, Tibshirani & Friedman 2009, *The Elements of Statistical Learning*, section 7.2, https://doi.org/10.1007/978-0-387-84858-7). Careful: many ecology papers say "validation data" for what ML calls the test set | `hold_out_test`, `assign_folds` in `data/splits.py` | |
+| Cross-validation, fold, k | Split the pool (every pixel not in the test set) into k folds. Each fold takes a turn as validation while the other k-1 train a fresh model, so every pool pixel validates exactly once. The final model then retrains on the whole pool | `n_folds` | `rsample::vfold_cv()`, `caret` |
 | Stratified | Every fold (and the test set) keeps the same burned/unburned ratio | `data/splits.py` | `strata =` in `rsample` |
 | Spatial block CV | Folds made of whole geographic blocks, so neighbouring pixels can't leak information across (Roberts et al. 2017) | `data/blocks.py`, `block_size_km` | `blockCV` package |
 | Threshold | Probability cut-off for calling a pixel burned. 0.5 for models trained on 50/50 data, where it matches the real burned share. Not a training setting: it only changes recall, precision, specificity and TSS (Liu et al. 2005, https://doi.org/10.1111/j.0906-7590.2005.03957.x) | `threshold` in `compute_metrics` | |

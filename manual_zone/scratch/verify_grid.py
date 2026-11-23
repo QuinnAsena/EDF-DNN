@@ -61,6 +61,10 @@ print(full_stack.shape)                # (26, 1547, 1929)
 # when run as a whole script, the plot is skipped unless you add plt.show().
 full_stack.sel(band="tcc").plot()
 
+# import matplotlib.pyplot as plt    # not "import matplotlib as plt"
+# full_stack.sel(band="tcc").plot()
+# plt.show()
+
 # ---------------------------------------------------------------------------
 # 5. crop_to_grid: cut the historical stack down to the future grid
 # ---------------------------------------------------------------------------
@@ -104,25 +108,25 @@ print(x_grid[:2, :3])                           # x changes along a row...
 print(y_grid[:2, :3])                           # ...y changes down a column
 
 # Now the real function
-table = to_pixel_table(cropped)
-print(table.head())                             # cell_id, x, y, burned01, evergreen, ...
-print(len(table))                               # 563,475 complete pixels out of 1,436,649 cells
-print(table["burned01"].value_counts())         # like table() in R
+historical_data = to_pixel_table(cropped)
+print(historical_data.head())                   # cell_id, x, y, burned01, evergreen, ...
+print(len(historical_data))                     # 563,475 complete pixels out of 1,436,649 cells
+print(historical_data["burned01"].value_counts())  # like table() in R
 
 # Cross-reference with the future CSV. Elevation and slope don't change over
 # time, so joining on cell_id = ID must give identical values, if the IDs match.
 future = pd.read_csv(f"{config['data_dir']}/{config['future_table']}",
                      usecols=["ID", "elevation_1km", "slope_1km"])
-joined = table.merge(future, left_on="cell_id", right_on="ID",   # like dplyr::inner_join()
-                     suffixes=("_historical", "_future"))
+joined = historical_data.merge(future, left_on="cell_id", right_on="ID",  # like dplyr::inner_join()
+                               suffixes=("_historical", "_future"))
 print(len(joined))                              # pixels found in both tables
 for name in ["elevation_1km", "slope_1km"]:
     difference = (joined[f"{name}_historical"] - joined[f"{name}_future"]).abs()
     print(f"{name}: largest difference {difference.max():.2g}")   # ~0: every row lines up
 
 # Control: shift the IDs by one cell and the same check fails almost everywhere
-shifted = table.assign(cell_id=table["cell_id"] + 1).merge(future, left_on="cell_id", right_on="ID",
-                                                           suffixes=("_historical", "_future"))
+shifted = historical_data.assign(cell_id=historical_data["cell_id"] + 1)
+shifted = shifted.merge(future, left_on="cell_id", right_on="ID", suffixes=("_historical", "_future"))
 mismatches = (shifted["elevation_1km_historical"] - shifted["elevation_1km_future"]).abs() > 0.001
 print("off by one cell, elevations that differ:", int(mismatches.sum()))
 

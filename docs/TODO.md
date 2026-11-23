@@ -30,6 +30,7 @@ stratified folds as before, so the old AUCs are a fair check (see NOTES.md,
 - [x] `train/loop.py`: `choose_device`, `train_one_epoch`, `predict_probabilities`, `fit` (early stopping on validation ROC AUC, patience 30, max 1000 epochs)
 - [x] `data/splits.py`: `hold_out_test`, `assign_folds` (stratified), `downsample`
 - [x] `train/run.py` (a): configs, run folder (`overwrite`, `config.yaml`, `git_commit.txt`), pixel table, test set and folds (`splits.csv`)
+- [x] Rename the loaded historical pixel table `table` -> `historical_data` (run.py `main`, test_run, scratch scripts; verify_normalise.py by hand). Function arguments named `table` stay: they take any pixel table
 - [ ] `train/run.py` (b): one fold (scaler on the full training fold, then downsample), then the grid search; save per-pixel predictions (`cell_id`, label, probability) so curves and new metrics need no retraining
 - [ ] `train/run.py` (c): final retrain on the whole pool for the median best epoch (log the mean too, to compare), scored once on the test set
 - [x] MLP variant configs: `mlp_single`, `mlp_two_layer`, `mlp_tapered` (full grids), plus `dev_quick` for building code only

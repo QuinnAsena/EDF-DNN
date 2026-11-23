@@ -90,11 +90,11 @@ def test_pixel_table_is_cropped_to_the_future_grid(tmp_path):
     data = {**DATA, "data_dir": str(tmp_path),   # an absolute path is used as it is
             "historical_raster": "historical.tif", "future_raster": "future.tif"}
 
-    table = load_pixel_table(data)
+    historical_data = load_pixel_table(data)
 
-    assert list(table.columns) == ["cell_id", "x", "y", "burned01", "elevation"]
-    assert table["cell_id"].tolist() == [1, 2, 3, 4]               # cell numbers on the future grid
-    assert table["elevation"].tolist() == [5.0, 6.0, 9.0, 10.0]   # historical cells 5, 6, 9, 10
+    assert list(historical_data.columns) == ["cell_id", "x", "y", "burned01", "elevation"]
+    assert historical_data["cell_id"].tolist() == [1, 2, 3, 4]              # cell numbers on the future grid
+    assert historical_data["elevation"].tolist() == [5.0, 6.0, 9.0, 10.0]  # historical cells 5, 6, 9, 10
 
 
 def test_splits_file_lists_every_pixel_once(tmp_path):

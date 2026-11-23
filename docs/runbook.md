@@ -78,6 +78,19 @@ On a GPU machine (e.g. NCAR Casper): `pixi install -e cuda`, then `pixi run -e c
 - Restart the console when things get weird: click the bin icon on the
   terminal, then Shift+Enter starts a fresh one.
 
+## Checking the pipeline step by step
+
+Scripts in `manual_zone/scratch/`, in pipeline order, to step through with
+Shift+Enter on the real data:
+
+1. `verify_grid.py`: load the rasters, crop to the future grid, pixel table
+2. `verify_splits.py`: test set, folds and downsampling, with maps
+3. `verify_normalise.py`: scaling (each variable on its own 0-1 scale)
+4. `reprex_batches.py`: mini-batches, on ten made-up pixels
+5. `walkthrough_mlp.py`: the whole MLP for one fold, top to bottom (about a minute)
+
+The tests for one stage: `pixi run pytest tests/test_splits.py -v`.
+
 ## R to Python cheat sheet
 
 | R | Python |

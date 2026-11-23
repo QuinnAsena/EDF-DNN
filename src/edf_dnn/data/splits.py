@@ -19,7 +19,10 @@ def hold_out_test(table, target, test_fraction, seed):
     """Split pixels into a training pool and a held-out test set.
 
     Stratified: both keep the table's burned share. The test set is never
-    seen during cross-validation or model selection, only scored at the end.
+    seen during cross-validation or model selection, only scored at the end
+    (training / validation / test roles as in Hastie, Tibshirani & Friedman
+    2009, The Elements of Statistical Learning, section 7.2,
+    https://doi.org/10.1007/978-0-387-84858-7).
 
     Returns
     -------
