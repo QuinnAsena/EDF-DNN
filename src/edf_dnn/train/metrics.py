@@ -28,6 +28,11 @@ def compute_metrics(labels, probabilities, threshold=0.5):
     threshold     : a pixel counts as "predicted burned" above this probability.
                     Only recall, specificity, precision and TSS use it; the
                     other metrics look at the probabilities themselves.
+                    0.5 suits models trained on downsampled 50/50 data: on the
+                    real scale it corresponds to the burned share, and gave
+                    the highest TSS on our data (NOTES.md, 2026-11-19). On
+                    choosing thresholds: Liu et al. (2005), Ecography 28:
+                    385-393, https://doi.org/10.1111/j.0906-7590.2005.03957.x
 
     Returns
     -------
@@ -82,8 +87,8 @@ def compute_metrics(labels, probabilities, threshold=0.5):
     # https://doi.org/10.1016/j.ijforecast.2018.11.010
     brier_skill_score = 1 - brier / (burned_share * (1 - burned_share))
 
-    # Log loss: the binary cross-entropy, i.e. the training loss without
-    # pos_weight. Like Brier, but punishes confident mistakes much harder
+    # Log loss: the binary cross-entropy, the same formula as the training
+    # loss (BCEWithLogitsLoss). Like Brier, but punishes confident mistakes much harder
     # (a burned pixel given 0.01 costs far more than one given 0.3). Lower is better.
     log_loss_value = log_loss(labels, probabilities)
 

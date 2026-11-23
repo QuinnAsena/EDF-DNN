@@ -12,7 +12,8 @@ EDF-DNN/
 ├── pyproject.toml          makes src/edf_dnn importable as `edf_dnn`; pytest settings
 ├── configs/                settings, not code
 │   ├── data.yaml           file names, the variables, fold settings (shared by all runs)
-│   └── experiments/        one YAML per experiment: model, hyperparameters, imbalance method
+│   └── experiments/        one YAML per experiment: model and hyperparameters
+│                           (mlp_single, mlp_two_layer, mlp_tapered; dev_quick for building code only)
 ├── src/edf_dnn/            all the real code
 │   ├── data/               rasters -> pixels or patches -> tensors
 │   ├── models/             network architectures
@@ -37,14 +38,15 @@ says what will go there.
 | Folder or file | What it does |
 |---|---|
 | `data/grid.py` | Opens the rasters, selects bands by name, crops historical to the future grid, gives every pixel a `cell_id` and x/y |
-| `data/blocks.py` | Spatial blocks and cross-validation folds (which pixels train, which validate) |
+| `data/splits.py` | Which pixels are used for what: held-out test set, cross-validation folds (random, stratified), downsampling |
+| `data/blocks.py` | Later: spatial blocks as folds, replacing the random folds |
 | `data/normalise.py` | Save and load the `MinMaxScaler` fitted on training pixels (`scaler.pkl` in each run) |
 | `data/datasets.py` | Pixels to tensors (`pixel_dataset`) and mini-batches (`batch_loader`); later one patch per sample for the CNN and U-Net |
 | `models/mlp.py` | The MLPs from geocomp-2025 (single, two-layer, tapered) |
 | `models/cnn.py`, `models/unet.py` | Patch CNN and U-Net |
-| `train/loop.py` | `choose_device`, `train_one_epoch`, `predict` (per-pixel probabilities), `fit` (early stopping on validation ROC AUC) |
+| `train/loop.py` | `choose_device`, `train_one_epoch`, `predict_probabilities` (per-pixel probabilities), `fit` (early stopping on validation ROC AUC) |
 | `train/metrics.py` | One function for all metrics (ROC AUC, average precision, Brier and its skill score, log loss, recall, specificity, precision, TSS) |
-| `train/run.py` | The one command that runs an experiment from its config file |
+| `train/run.py` | The one command that runs an experiment from its config file: `pixi run python -m edf_dnn.train.run configs/experiments/<name>.yaml` |
 | `predict.py` | Applies a trained run to the future grid and writes a GeoTIFF |
 
 Folds and scaling sit in `data/` because they decide what the model is
@@ -76,14 +78,14 @@ configs/experiments/x.yaml
         │
         ▼
 train/run.py ── data/grid.py ─────── rasters in data/
-        │       data/blocks.py       which pixels are train / validation
+        │       data/splits.py       test set, folds, downsampling
         │       data/normalise.py    scaling from training pixels only
         │       data/datasets.py     pixels or patches as tensors
         │       models/...           the network
         │       train/loop.py        fit, validate, early stopping
         │       train/metrics.py     scores
         ▼
-runs/x/  (config, metrics, weights, scaler)
+runs/x/  (config, git commit, splits, metrics, predictions, weights, scaler)
         │
         ├──► reports/*.qmd          plots and tables
         └──► predict.py             future burn-probability GeoTIFF

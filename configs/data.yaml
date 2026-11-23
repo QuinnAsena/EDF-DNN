@@ -1,9 +1,8 @@
 # configs/data.yaml — shared data settings used by every experiment.
-# DRAFT: the field names get finalised when the data layer is built (phase 2).
+# Read by train/run.py, and copied into every run folder.
 
-# Folder holding the input files. Relative paths are from the repo root.
-# On a cluster, point this at /glade/... instead (or override it with an
-# environment variable, to be decided in phase 2).
+# Folder holding the input files. A relative path is taken from the repo
+# root; on a cluster, an absolute path (/glade/...) works as it is.
 data_dir: data
 
 # Development data (2009-2024 historical, NorESM2-MM SSP3-7.0 2026-2040).
@@ -48,7 +47,11 @@ variables:
   - fwi_annual_max
   - fwi_annual_sum
 
-# Spatial cross-validation (phase 2)
-block_size_km: 50     # placeholder; to be tuned
-n_folds: 5
+# Splitting (data/splits.py). Shared by every experiment, so all of them
+# are tested on the same pixels and cross-validated on the same folds.
+test_fraction: 0.1    # held-out test set, stratified; scored once at the very end
+n_folds: 5            # cross-validation folds: random and stratified for now
 random_seed: 1984
+
+# Spatial cross-validation (phase 2, part 2: data/blocks.py)
+block_size_km: 50     # placeholder; to be tuned

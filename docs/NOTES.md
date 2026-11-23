@@ -281,3 +281,40 @@ wording fixes. For the `run.py` design:
   directory (cluster jobs start elsewhere).
 - A fold's best-epoch validation AUC is slightly optimistic (the best of many
   epochs on that fold); only the held-out test score is unbiased.
+
+## Decisions after the review (2026-11-19)
+
+- **`pos_weight` dropped.** In geocomp-2025 it gave the same validation AUC
+  as downsampling (single-layer: 0.798 weighted, 0.796 downsampled), and
+  downsampling trains about 3.7x faster per epoch and is the base of the
+  planned ensemble. Every training fold is downsampled; the `imbalance:`
+  config key is gone.
+- **MLP variants:** single-layer and two-layer (to compare with the old AUCs)
+  plus the tapered MLP, which existed in geocomp-2025 but was never trained.
+  The MLPs are a stepping stone; the real gains are expected from the CNN
+  and U-Net.
+- **Renames:** `predict` -> `predict_probabilities` (it serves validation,
+  test and future pixels alike, and `edf_dnn.predict` is the future-map
+  module); MLP layers `fc1`/`fc2`/`fc3` -> `hidden_layer`,
+  `first_hidden_layer`, `second_hidden_layer`, `output_layer`.
+- **Threshold stays 0.5** (see "Threshold" above).
+
+## run.py, step (a) (2026-11-19)
+
+- **Decided:** the scaler is fitted on the full training fold, then the fold
+  is downsampled (the old code downsampled first): min and max then come
+  from about 405,000 pixels instead of 111,000. The final model trains for
+  the median best epoch across folds (the old code used the mean stop epoch,
+  which runs `patience` epochs past the best); `cv_results.csv` will log the
+  mean too, to compare.
+- **Splits are shared by all experiments** (`test_fraction`, `n_folds`,
+  `random_seed` in `data.yaml`) and saved per run in `splits.csv`. On the
+  development data: 56,348 test pixels, a pool of 507,127 in 5 folds of
+  about 101,400; burned share 0.137 in every one.
+- **`dev_quick.yaml` is for building code only:** the old best two-layer
+  setting with 20 epochs, writing to its own `runs/dev_quick/`. The real
+  configs hold the full geocomp-2025 grid, which contains the old best
+  settings, so the full runs give the comparison with the old AUCs.
+- `mlp_baseline.yaml` was renamed `mlp_two_layer.yaml`; a test checks that
+  every config's `name` matches its file name, so two configs can never
+  write to the same run folder.

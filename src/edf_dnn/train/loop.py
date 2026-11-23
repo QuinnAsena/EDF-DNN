@@ -2,11 +2,13 @@
 
 Contents
 --------
-- choose_device   : the GPU if there is one, else the CPU.
-- train_one_epoch : one pass over the training batches, updating the weights after each.
-- predict         : burn probability for every pixel in a loader, with its label and cell_id.
-- fit             : train_one_epoch + predict, epoch after epoch, until validation
-                    ROC AUC stops improving; the model keeps its best epoch's weights.
+- choose_device         : the GPU if there is one, else the CPU.
+- train_one_epoch       : one pass over the training batches, updating the weights after each.
+- predict_probabilities : burn probability for every pixel in a loader, with its
+                          label and cell_id (validation, test or, later, future pixels).
+- fit                   : train_one_epoch + predict_probabilities, epoch after epoch,
+                          until validation ROC AUC stops improving; the model keeps
+                          its best epoch's weights.
 
 Early stopping watches validation ROC AUC, not validation loss: with
 downsampled training, the validation loss wobbles up and down while the
@@ -52,7 +54,7 @@ def train_one_epoch(model, loader, loss_function, optimizer, device):
     return total_loss / pixel_count
 
 
-def predict(model, loader, device):
+def predict_probabilities(model, loader, device):
     """Predicted burn probability for every pixel in a loader.
 
     Returns a DataFrame with cell_id, label and probability, one row per
@@ -91,7 +93,7 @@ def fit(model, training_loader, validation_loader, loss_function, optimizer, dev
 
     for epoch in range(1, max_epochs + 1):
         training_loss = train_one_epoch(model, training_loader, loss_function, optimizer, device)
-        predictions = predict(model, validation_loader, device)
+        predictions = predict_probabilities(model, validation_loader, device)
         metrics = compute_metrics(predictions["label"], predictions["probability"])
 
         # One row of the history: the epoch, the training loss, then each

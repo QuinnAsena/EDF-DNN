@@ -1,0 +1,22 @@
+# configs/experiments/dev_quick.yaml
+# DEVELOPMENT ONLY: for building and checking run.py, not for results.
+# One setting (geocomp-2025's best two-layer one) and only 20 epochs, so a
+# whole run takes minutes. Its numbers are undertrained and must not be
+# reported or compared; it writes to its own folder, runs/dev_quick/, and
+# nothing reads from it. The real experiments are the mlp_*.yaml files.
+
+name: dev_quick                  # = the run folder name; keep equal to this file's name
+overwrite: true
+
+model:
+  architecture: FeedforwardTwo   # class name in edf_dnn.models
+  hidden_size: [256]             # one value each: no grid search
+  dropout: [0.2]
+
+training:
+  learning_rate: [1.0e-3]
+  batch_size: 4096
+  max_epochs: 20                 # far too few for real results; just enough to run everything
+  patience: 30
+
+device: auto

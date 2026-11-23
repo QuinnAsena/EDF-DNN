@@ -1,0 +1,22 @@
+# configs/experiments/mlp_two_layer.yaml
+# Two hidden layers of equal width: geocomp-2025's best MLP (validation AUC
+# about 0.86, single split). Everything that defines the run lives here and
+# is copied into runs/mlp_two_layer/.
+
+name: mlp_two_layer              # = the run folder name; keep equal to this file's name
+overwrite: true                  # during development, re-running replaces runs/mlp_two_layer/
+
+model:
+  architecture: FeedforwardTwo   # class name in edf_dnn.models
+  hidden_size: [128, 256]        # lists = values to grid-search over (geocomp-2025's grid)
+  dropout: [0.1, 0.2]
+
+training:
+  learning_rate: [1.0e-3, 5.0e-4, 1.0e-4]
+  batch_size: 4096
+  max_epochs: 1000               # a time cap: ~1 s per epoch on the laptop CPU (downsampled, hidden 128)
+  patience: 30                   # stop after 30 epochs without a better validation ROC AUC
+  # Imbalance: every training fold is downsampled to 50/50 burned/unburned.
+  # (pos_weight was dropped: same AUC in geocomp-2025, see NOTES.md)
+
+device: auto                     # auto = GPU if available, else CPU

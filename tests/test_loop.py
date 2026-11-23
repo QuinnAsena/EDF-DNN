@@ -8,7 +8,7 @@ from torch.utils.data import TensorDataset
 
 from edf_dnn.data.datasets import batch_loader
 from edf_dnn.models.mlp import FeedforwardSingle
-from edf_dnn.train.loop import choose_device, fit, predict, train_one_epoch
+from edf_dnn.train.loop import choose_device, fit, predict_probabilities, train_one_epoch
 from edf_dnn.train.metrics import compute_metrics
 
 CPU = torch.device("cpu")
@@ -46,19 +46,19 @@ def test_training_lowers_the_loss():
     assert losses[-1] < losses[0] * 0.5
 
 
-def test_predict_gives_one_row_per_pixel():
+def test_predict_probabilities_gives_one_row_per_pixel():
     features, burned, cell_ids = make_pixels()
     loader = batch_loader(TensorDataset(features, burned, cell_ids), batch_size=50, shuffle=False)
-    # Heavy dropout: predictions are only repeatable if predict switches it off
+    # Heavy dropout: predictions are only repeatable if dropout is switched off
     model, _ = make_model(dropout=0.5)
 
-    predictions = predict(model, loader, CPU)
+    predictions = predict_probabilities(model, loader, CPU)
 
     assert list(predictions.columns) == ["cell_id", "label", "probability"]
     assert predictions["cell_id"].tolist() == cell_ids.tolist()
     assert predictions["label"].tolist() == burned.tolist()
     assert predictions["probability"].between(0, 1).all()
-    assert predictions.equals(predict(model, loader, CPU))
+    assert predictions.equals(predict_probabilities(model, loader, CPU))
 
 
 def test_fit_stops_after_patience_and_keeps_the_best_weights():
@@ -78,7 +78,7 @@ def test_fit_stops_after_patience_and_keeps_the_best_weights():
     assert best_epoch == 1
     assert history["epoch"].tolist() == [1, 2, 3, 4, 5, 6]
     # The model now holds epoch 1's weights, not epoch 6's
-    predictions = predict(model, validation, CPU)
+    predictions = predict_probabilities(model, validation, CPU)
     roc_auc_now = compute_metrics(predictions["label"], predictions["probability"])["roc_auc"]
     assert roc_auc_now == history.loc[0, "validation_roc_auc"]
     assert roc_auc_now > history.loc[5, "validation_roc_auc"]

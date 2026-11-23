@@ -1,0 +1,21 @@
+# configs/experiments/mlp_single.yaml
+# One hidden layer: geocomp-2025's simplest MLP (validation AUC about 0.80,
+# single split). Everything that defines the run lives here and is copied
+# into runs/mlp_single/.
+
+name: mlp_single                 # = the run folder name; keep equal to this file's name
+overwrite: true                  # during development, re-running replaces runs/mlp_single/
+
+model:
+  architecture: FeedforwardSingle   # class name in edf_dnn.models
+  hidden_size: [128, 256]        # lists = values to grid-search over (geocomp-2025's grid)
+  dropout: [0.1, 0.2]
+
+training:
+  learning_rate: [1.0e-3, 5.0e-4, 1.0e-4]
+  batch_size: 4096
+  max_epochs: 1000               # a time cap
+  patience: 30                   # stop after 30 epochs without a better validation ROC AUC
+  # Imbalance: every training fold is downsampled to 50/50 burned/unburned.
+
+device: auto                     # auto = GPU if available, else CPU

@@ -18,8 +18,8 @@ and the nearest R or statistics idea. Add a row whenever a new term comes up.
 | Batch / mini-batch | A handful of samples processed together before one weight update. Full-batch = all data at once, as in the old code | `batch_size` in experiment configs | |
 | Epoch | One full pass through the training data. With batches of 4096 that is about 111 weight updates; in the old full-batch code it was 1 | `max_epochs` | one iteration over all rows |
 | Class imbalance | Far more of one class than the other (here about 6 unburned per burned pixel) | | rare-event data |
-| Downsampling | Drop majority-class samples from the training folds until classes are balanced | `imbalance: downsample` | `sample()` on the unburned rows |
-| `pos_weight` | Alternative to downsampling: keep every sample, but count each burned pixel's error (unburned / burned) times more in the loss | `imbalance: pos_weight` | `weights =` in `glm()` |
+| Downsampling | Drop majority-class samples from the training folds until classes are balanced | `downsample` in `data/splits.py`, on every training fold | `sample()` on the unburned rows |
+| `pos_weight` | Alternative to downsampling: keep every sample, but count each burned pixel's error (unburned / burned) times more in the loss | not used: same AUC as downsampling in geocomp-2025 (NOTES.md) | `weights =` in `glm()` |
 | Scaling / normalisation | Rescale each variable to a similar range (0-1, or mean 0 and sd 1) so no variable dominates just by its units | `data/normalise.py` | `scale()` |
 | Min-max scaling | (x - min) / (max - min), with min and max from the training pixels, so those span 0-1. Squashed by extreme values: heavily skewed variables need a log first | `MinMaxScaler`, saved by `save_scaler` | `scales::rescale()` |
 | Pickle | Python's way of saving any object to a file and loading it back unchanged | `scaler.pkl` | `saveRDS()` / `readRDS()` |
@@ -31,13 +31,13 @@ and the nearest R or statistics idea. Add a row whenever a new term comes up.
 | Term | Plain meaning | In our code | R / stats analogy |
 |---|---|---|---|
 | Neuron (unit) | Takes a weighted sum of its inputs plus a bias, then applies an activation function | | one linear predictor |
-| Layer, `nn.Linear` | A set of neurons. "Linear" or "fully connected": every input feeds every neuron | `fc1`, `fc2`, `fc3` in `models/mlp.py` | `X %*% W + b` |
+| Layer, `nn.Linear` | A set of neurons. "Linear" or "fully connected": every input feeds every neuron | `hidden_layer`, `output_layer` in `models/mlp.py` | `X %*% W + b` |
 | Hidden layer, `hidden_size` | Layers between input and output; `hidden_size` is the number of neurons in each | `hidden_size` | |
 | Weights and biases (parameters) | The numbers the network learns | | regression coefficients |
 | Activation function, ReLU | A bend applied after each layer. ReLU = max(0, x). Without it, stacked layers collapse into one linear model | `nn.ReLU` in `models/mlp.py` | `pmax(0, x)` |
 | MLP (multilayer perceptron) | Stacked linear layers with activations between them. An MLP with no hidden layer is logistic regression | `models/mlp.py` | `glm(family = binomial)` plus learned non-linear transforms of the predictors |
 | Logit | The raw model output, from minus to plus infinity: the log-odds | every model returns logits | `predict(type = "link")` |
-| Sigmoid | Turns a logit into a probability between 0 and 1 | applied at evaluation and prediction | `plogis()` |
+| Sigmoid | Turns a logit into a probability between 0 and 1 | `predict_probabilities` | `plogis()` |
 | Dropout | During training, randomly switch off a fraction of neurons on each pass, so the network can't rely on any single one. Reduces overfitting. Off at prediction time | `dropout` | |
 | Bagging | Train many separate models on resamples of the data and average them. Dropout is often described as a cheap version of bagging many thinned networks inside one network | planned: the downsampling ensemble ("EasyEnsemble", TODO.md) | random forest = bagged trees |
 | `model.train()` / `model.eval()` | Switch the model into training mode (dropout on) or evaluation mode (dropout off) | `train/loop.py` | |
@@ -66,11 +66,11 @@ and the nearest R or statistics idea. Add a row whenever a new term comes up.
 
 | Term | Plain meaning | In our code | R / stats analogy |
 |---|---|---|---|
-| Training / validation / test set | Fit on training; pick hyperparameters and stop early on validation; report once on test | `train/run.py` | |
+| Training / validation / test set | Fit on training; pick hyperparameters and stop early on validation; report once on test (the held-out 10%) | `hold_out_test`, `assign_folds` in `data/splits.py` | |
 | Cross-validation, fold, k | Split the data into k folds; each fold takes a turn as validation | `n_folds` | `rsample::vfold_cv()`, `caret` |
-| Stratified | Every fold keeps the same burned/unburned ratio | | `strata =` |
+| Stratified | Every fold (and the test set) keeps the same burned/unburned ratio | `data/splits.py` | `strata =` in `rsample` |
 | Spatial block CV | Folds made of whole geographic blocks, so neighbouring pixels can't leak information across (Roberts et al. 2017) | `data/blocks.py`, `block_size_km` | `blockCV` package |
-| Threshold | Probability cut-off for calling a pixel burned (default 0.5) | `train/metrics.py` | |
+| Threshold | Probability cut-off for calling a pixel burned. 0.5 for models trained on 50/50 data, where it matches the real burned share. Not a training setting: it only changes recall, precision, specificity and TSS (Liu et al. 2005, https://doi.org/10.1111/j.0906-7590.2005.03957.x) | `threshold` in `compute_metrics` | |
 | Confusion matrix | Counts of true/false positives and negatives at a threshold | `train/metrics.py` | `table(observed, predicted)` |
 | Precision | Of the pixels predicted burned, the fraction that actually burned: TP / (TP + FP) | `train/metrics.py` | positive predictive value |
 | Recall (sensitivity) | Of the pixels that actually burned, the fraction the model caught: TP / (TP + FN) | `train/metrics.py` | sensitivity |
