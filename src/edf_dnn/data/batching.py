@@ -2,10 +2,11 @@
 
 Contents
 --------
-- pixel_dataset : pixel table -> TensorDataset of (features, labels, cell_ids),
-                  one sample per pixel (the MLP's view; replaces the old to_tensors).
-- batch_loader  : hands a dataset out in mini-batches, shuffled for training
-                  or in order for evaluation.
+- table_to_tensors : pixel table -> scaled tensors (features, labels, cell_ids),
+                     bundled as a TensorDataset, one sample per pixel (the
+                     MLP's view; replaces the old to_tensors).
+- batch_loader     : hands a dataset out in mini-batches, shuffled for training
+                     or in order for evaluation.
 
 A Dataset answers two questions: how many samples are there, and what is
 sample number i? A DataLoader then deals the samples out in mini-batches.
@@ -32,8 +33,8 @@ from torch.utils.data import (
 )
 
 
-def pixel_dataset(table, variables, scaler, target="burned01"):
-    """Turn a pixel table into a PyTorch dataset with one sample per pixel.
+def table_to_tensors(table, variables, scaler, target="burned01"):
+    """Turn a pixel table into scaled tensors, bundled with one sample per pixel.
 
     Parameters
     ----------
@@ -70,7 +71,7 @@ def batch_loader(dataset, batch_size, shuffle):
 
     Parameters
     ----------
-    dataset    : e.g. from pixel_dataset
+    dataset    : e.g. from table_to_tensors
     batch_size : pixels per batch; the last batch holds whatever is left over
     shuffle    : True for training (a new random order every epoch), False for
                  evaluation (the dataset's own order)

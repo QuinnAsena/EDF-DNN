@@ -18,7 +18,7 @@ import torch
 import yaml
 from sklearn.preprocessing import MinMaxScaler
 
-from edf_dnn.data.batching import batch_loader, pixel_dataset
+from edf_dnn.data.batching import batch_loader, table_to_tensors
 from edf_dnn.data.grid import crop_to_grid, open_stack, to_pixel_table
 from edf_dnn.data.splits import assign_folds, downsample, hold_out_test
 from edf_dnn.models.mlp import FeedforwardTwo
@@ -61,9 +61,9 @@ print(len(balanced), balanced[target].mean())          # 110,866 pixels, 0.5 bur
 # ---------------------------------------------------------------------------
 # 4. Tensors and mini-batches
 # ---------------------------------------------------------------------------
-training_loader = batch_loader(pixel_dataset(balanced, variables, scaler, target),
+training_loader = batch_loader(table_to_tensors(balanced, variables, scaler, target),
                                batch_size, shuffle=True)
-validation_loader = batch_loader(pixel_dataset(validation, variables, scaler, target),
+validation_loader = batch_loader(table_to_tensors(validation, variables, scaler, target),
                                  batch_size, shuffle=False)
 features, labels, cell_ids = next(iter(training_loader))   # peek at the first batch
 print(features.shape, labels.shape, cell_ids[:5])      # (4096, 25), (4096,), five cell_ids

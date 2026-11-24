@@ -88,6 +88,8 @@ Shift+Enter on the real data:
 3. `verify_normalise.py`: scaling (each variable on its own 0-1 scale)
 4. `reprex_batches.py`: mini-batches, on ten made-up pixels
 5. `walkthrough_mlp.py`: the whole MLP for one fold, top to bottom (about a minute)
+6. `verify_training.py`: training numbers against known answers (loss at start, memorising 64 pixels, logistic-regression baseline, early stopping; about 3 minutes)
+7. `verify_run.py`: a finished run folder's files against each other and the data (`runs/dev_quick/` by default; about 15 seconds)
 
 The tests for one stage: `pixi run pytest tests/test_splits.py -v`.
 

@@ -8,7 +8,7 @@ import pytest
 import torch
 from sklearn.preprocessing import MinMaxScaler
 
-from edf_dnn.data.batching import batch_loader, pixel_dataset
+from edf_dnn.data.batching import batch_loader, table_to_tensors
 
 # Ten pixels built so every row can be checked: elevation = 10 x cell_id,
 # and the even cell_ids burned
@@ -19,7 +19,7 @@ SCALER = MinMaxScaler().fit(TABLE[["elevation"]])
 
 
 def make_dataset():
-    return pixel_dataset(TABLE, ["elevation"], SCALER)
+    return table_to_tensors(TABLE, ["elevation"], SCALER)
 
 
 def test_dataset_holds_every_pixel_scaled():
@@ -41,7 +41,7 @@ def test_dataset_uses_the_given_scaler_not_its_own_table():
     validation = pd.DataFrame({"cell_id": [201, 202], "elevation": [1000.0, 1190.0],
                                "burned01": [0.0, 1.0]})
 
-    features, _, _ = pixel_dataset(validation, ["elevation"], SCALER).tensors
+    features, _, _ = table_to_tensors(validation, ["elevation"], SCALER).tensors
 
     # (1000 - 1010) / 90 and (1190 - 1010) / 90
     assert features.ravel().tolist() == pytest.approx([-10 / 90, 2.0])

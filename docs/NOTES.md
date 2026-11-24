@@ -351,3 +351,37 @@ wording fixes. For the `run.py` design:
   could take about a day; the three grids together may not fit one weekend.
 - **Rename:** `data/datasets.py` -> `data/batching.py` (and its test file):
   "datasets" read like the input data, not PyTorch's Dataset objects.
+
+## Training checks against known answers (2026-11-24)
+
+`manual_zone/scratch/verify_training.py`, fold 1, two-layer MLP (hidden 256,
+dropout 0.2, learning rate 1e-3), after Karpathy's "A Recipe for Training
+Neural Networks" (2019, http://karpathy.github.io/2019/04/25/recipe/):
+
+- **Loss before training:** 0.695 (expected -log(0.5) = 0.693); mean
+  probability 0.48.
+- **Memorising 64 pixels:** training loss 0.70 -> 0.02 (100 epochs) ->
+  0.0001 (500); ROC AUC 1.0. Gradients and optimizer are connected.
+- **Baseline:** logistic regression (unpenalised, like `glm`) on the same
+  scaled, downsampled pixels: validation ROC AUC 0.712.
+- **Early stopping (patience 2):** best epoch 84 = the history's highest
+  AUC, stopped at 86 = best + patience, and the restored weights reproduce
+  epoch 84's AUC exactly (0.8415; the last epoch had 0.8406).
+- **Still improving at 200 epochs:** with patience 5 the same model never
+  stopped; at epoch 200 its validation ROC AUC was 0.874, already above
+  geocomp-2025's 0.861 (single split). So the real runs (patience 30) will
+  probably run long, and some may reach the 1000-epoch cap: check
+  `epochs_run` and `best_epoch` in `cv_folds.csv`. Worst case for the
+  two-layer grid is about a day.
+- **Run folder checks** (`manual_zone/scratch/verify_run.py`, on
+  `runs/dev_quick/`): every prediction sits in its own fold, no test pixel
+  was predicted, labels match `burned01` by `cell_id`, metrics recomputed
+  from `cv_predictions.parquet` equal `cv_folds.csv`, `cv_results.csv`
+  equals the fold means and sds, and `cv_history.csv` agrees on best
+  epochs. On a corrupted copy (two labels swapped, one best epoch changed)
+  the label, metric and history checks all fail, as they should. Rerun it on
+  each real grid once it finishes.
+- **Rename:** `pixel_dataset` -> `table_to_tensors` (in `data/batching.py`).
+  The old name said what kind of object comes back (a PyTorch Dataset) but
+  not what the function does: pixel table in, scaled tensors out. The earlier
+  entries above keep the old name.

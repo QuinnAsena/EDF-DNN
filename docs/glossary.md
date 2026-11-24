@@ -12,7 +12,7 @@ and the nearest R or statistics idea. Add a row whenever a new term comes up.
 | Feature / predictor | One input variable, e.g. `tcc` | `variables:` in `configs/data.yaml` | covariate, explanatory variable |
 | Label / target | The answer the model should predict | `burned01` | response variable `y` |
 | Dataset | Object that answers "how many samples?" and "give me sample i" | `data/batching.py` | |
-| `TensorDataset` | Ready-made Dataset that bundles matching tensors: sample i is row i of each | `pixel_dataset` | `cbind()`-ed columns of one table |
+| `TensorDataset` | Ready-made Dataset that bundles matching tensors: sample i is row i of each | `table_to_tensors` | `cbind()`-ed columns of one table |
 | DataLoader | Deals a Dataset out in mini-batches, one per step of a for loop | `batch_loader` | `for (rows in chunks) table[rows, ]` |
 | Sampler (`RandomSampler`, `BatchSampler`) | Decides the order rows are visited in (random or as they are) and cuts it into batches | `batch_loader` | `sample()`, then `split()` |
 | Batch / mini-batch | A handful of samples processed together before one weight update. Full-batch = all data at once, as in the old code | `batch_size` in experiment configs | |
@@ -92,6 +92,7 @@ scores once on test.
 | True skill statistic (TSS) | Recall + specificity - 1, at a threshold. 0 = random, 1 = perfect; unaffected by the burned share (Allouche et al. 2006) | `train/metrics.py` | Youden's J |
 | Burned share (prevalence) | Fraction of the evaluated pixels that burned; the no-skill baseline for average precision and the Brier skill score | `train/metrics.py` | `mean(y)` |
 | ROC AUC | Chance the model ranks a random burned pixel above a random unburned one. 0.5 = coin toss, 1 = perfect | `train/metrics.py` | `pROC::auc()` |
+| Baseline | A simple model the network must beat to be worth it. Here logistic regression (a network with no hidden layer) on the same fold: validation ROC AUC 0.712 | `manual_zone/scratch/verify_training.py` | `glm(family = binomial)` |
 | Average precision (PR AUC) | Summary of the precision-recall curve; more informative when classes are imbalanced. A useless model scores the burned share (about 0.14 here) | `train/metrics.py` | `PRROC` |
 | Brier score | Mean squared difference between predicted probability and the 0/1 outcome; lower is better (Brier 1950) | `train/metrics.py` | `mean((p - y)^2)` |
 | Brier skill score | Brier score relative to always predicting the burned share. 1 = perfect, 0 = no skill, below 0 = worse than that | `train/metrics.py` | `1 - BS / BS_reference` |

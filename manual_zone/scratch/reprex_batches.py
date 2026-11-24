@@ -1,4 +1,4 @@
-"""Reprex: how pixel_dataset and batch_loader shuffle pixels and split them into mini-batches.
+"""Reprex: how table_to_tensors and batch_loader shuffle pixels and split them into mini-batches.
 
 Ten made-up pixels, batches of 4. Run it line by line with Shift+Enter, or all
 at once with:  pixi run python manual_zone/scratch/reprex_batches.py
@@ -13,7 +13,7 @@ import pandas as pd
 import torch
 from sklearn.preprocessing import MinMaxScaler
 
-from edf_dnn.data.batching import batch_loader, pixel_dataset
+from edf_dnn.data.batching import batch_loader, table_to_tensors
 
 # ---------------------------------------------------------------------------
 # 1. Ten pixels, built so every row can be checked by eye:
@@ -28,7 +28,7 @@ print(table)
 # 2. Scale and convert to tensors
 # ---------------------------------------------------------------------------
 scaler = MinMaxScaler().fit(table[["elevation"]])
-dataset = pixel_dataset(table, ["elevation"], scaler)
+dataset = table_to_tensors(table, ["elevation"], scaler)
 print(len(dataset))        # 10 pixels
 print(dataset[0])          # pixel 0: (scaled elevation, label, cell_id) = (0, 0, 101)
 print(dataset[9])          # pixel 9: (1, 1, 110)

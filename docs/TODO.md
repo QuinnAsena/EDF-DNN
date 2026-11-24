@@ -26,7 +26,7 @@ stratified folds as before, so the old AUCs are a fair check (see NOTES.md,
 - [x] `data/grid.py`: `to_pixel_table`, stack -> pixel table with `cell_id` and x/y (replaces the old `load_historical`)
 - [x] `train/metrics.py`: `compute_metrics` (average precision instead of trapezoid PR-AUC)
 - [x] `data/normalise.py`: sklearn `MinMaxScaler`, with `save_scaler`/`load_scaler` (pickle in the run folder)
-- [x] `data/batching.py`: `pixel_dataset` (a `TensorDataset`) + `batch_loader`, instead of a `PixelDataset` class
+- [x] `data/batching.py`: `table_to_tensors` (a `TensorDataset`) + `batch_loader`, instead of a `PixelDataset` class
 - [x] `train/loop.py`: `choose_device`, `train_one_epoch`, `predict_probabilities`, `fit` (early stopping on validation ROC AUC, patience 30, max 1000 epochs)
 - [x] `data/splits.py`: `hold_out_test`, `assign_folds` (stratified), `downsample`
 - [x] `train/run.py` (a): configs, run folder (`overwrite`, `config.yaml`, `git_commit.txt`), pixel table, test set and folds (`splits.csv`)
@@ -47,7 +47,7 @@ stratified folds as before, so the old AUCs are a fair check (see NOTES.md,
 - [ ] `data/blocks.py`: spatial block + fold map, saved once; replaces the random folds
 - [ ] Rebuild a float32 future stack from the future CSV via `ID`
 - [ ] `predict.py`: trained run -> future burn-probability GeoTIFF
-- [ ] Future pixels have no labels: `pixel_dataset` and the prediction function need a no-label path
+- [ ] Future pixels have no labels: `table_to_tensors` and the prediction function need a no-label path
 
 ## Phase 4: patch CNN, then U-Net
 
