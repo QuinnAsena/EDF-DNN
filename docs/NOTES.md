@@ -385,3 +385,59 @@ Neural Networks" (2019, http://karpathy.github.io/2019/04/25/recipe/):
   The old name said what kind of object comes back (a PyTorch Dataset) but
   not what the function does: pixel table in, scaled tensors out. The earlier
   entries above keep the old name.
+
+## Burned fraction and spatial autocorrelation (recorded 2026-11-24, for later)
+
+Two points raised by the user while reviewing the training loop.
+
+**Burned fraction instead of 0/1.** The new master-grid data will give the
+burned proportion of each 1 km pixel. What counts as "burned" then becomes
+a choice instead of something inherited.
+
+- **Threshold to 0/1.** Is a pixel with 1% burned (1 ha) a burned pixel?
+  The threshold defines what the map predicts: "the probability that at
+  least x% of the pixel burns". A low threshold adds edge pixels and mapping
+  noise; a high one leaves fewer burned pixels to learn from. Worth a
+  sensitivity check over a few thresholds.
+- **Where it would live.** A small function that turns the fraction column
+  into `burned01`, with the threshold in `configs/data.yaml`, rather than a
+  separate script: every run's saved `config.yaml` then records which
+  threshold it used.
+- **Or model the fraction directly.** `BCEWithLogitsLoss` accepts targets
+  between 0 and 1 (checked: a target of 0.3 works). The loss is smallest
+  when the prediction equals the fraction, so the network predicts the
+  expected burned fraction. This is fractional logistic regression (Papke &
+  Wooldridge 1996, https://doi.org/10.1002/(SICI)1099-1255(199611)11:6%3C619::AID-JAE418%3E3.0.CO;2-1),
+  in R `glm(family = quasibinomial)` on the fraction. Costs: ROC AUC and
+  average precision need 0/1 labels (score against a thresholded label, or
+  use log loss and Brier score, which work with fractions); stratified folds
+  and downsampling need classes (e.g. fraction > 0); most pixels are 0.
+- **Ask the colleagues** how the current `burned01` was made (which
+  threshold). New labels made the same way keep the new AUCs comparable with
+  these.
+
+**Spatial autocorrelation.** Two separate problems; the CNN solves only
+the first.
+
+- **In the model: the CNN helps.** A pixel's burn chance depends on its
+  surroundings (fuel continuity, terrain, neighbouring land cover). The MLP
+  sees only its own pixel. A CNN sees a patch around it, like adding
+  `terra::focal()` summaries of every predictor, except that the CNN learns
+  the weights. It uses spatial context in the predictors, but not the
+  neighbours' labels, so some residual autocorrelation can remain.
+- **In the evaluation: the CNN does not help.** With random folds, a
+  validation pixel's neighbours are near-identical training pixels, so
+  validation and test scores are optimistic (Roberts et al. 2017,
+  https://doi.org/10.1111/ecog.02881; Ploton et al. 2020,
+  https://doi.org/10.1038/s41467-020-18321-y, where a large mapping model
+  that scored well under random cross-validation did much worse under
+  spatial cross-validation). This affects training too, not only the
+  reported numbers: early stopping and the grid search pick whatever scores
+  best on those optimistic folds, which favours models that memorise local
+  detail. A patch CNN makes it worse: neighbouring patches overlap, so a
+  validation patch shares most of its input pixels with training patches.
+- **Fix:** spatial block folds (`data/blocks.py` in TODO; plan.md, "Spatial
+  blocks defined once"), with blocks larger than the CNN patch, or a buffer
+  of at least the patch radius, so no patch straddles training and
+  validation. Probably the test set too: hold out whole blocks rather than
+  random pixels.

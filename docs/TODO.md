@@ -44,7 +44,7 @@ stratified folds as before, so the old AUCs are a fair check (see NOTES.md,
 
 ## Phases 2-3, part 2: spatial folds and prediction
 
-- [ ] `data/blocks.py`: spatial block + fold map, saved once; replaces the random folds
+- [ ] `data/blocks.py`: spatial block + fold map, saved once; replaces the random folds (and probably the random test set). Blocks larger than the CNN patch, so no patch straddles training and validation (see NOTES 2026-11-24)
 - [ ] Rebuild a float32 future stack from the future CSV via `ID`
 - [ ] `predict.py`: trained run -> future burn-probability GeoTIFF
 - [ ] Future pixels have no labels: `table_to_tensors` and the prediction function need a no-label path
@@ -65,6 +65,7 @@ stratified folds as before, so the old AUCs are a fair check (see NOTES.md,
 - [ ] float32 rasters with band names and defined nodata
 - [ ] Decadal summaries: which periods, and a burn label per period?
 - [ ] Meaning of ysb = 100, and the reference date for years-since-burn
+- [ ] Burned fraction per pixel: threshold it to `burned01` (threshold in `data.yaml`, sensitivity check) or model the fraction directly? And which threshold made the current `burned01`? (see NOTES 2026-11-24)
 - [ ] Final variable set common to historical and future (and which skewed ones, like `flowacc_1km`, need a log before scaling: see NOTES 2026-11-18)
 
 ## Benched

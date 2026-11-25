@@ -3,7 +3,7 @@
 Nothing is retrained here: every check recomputes a saved number from other
 saved numbers, or from the pixel table, and compares.
 
-1. The run folder: what produced it
+1. The run folder: what produced it, then read its files back in
 2. Pixels: each prediction sits in its own fold; no test pixels; every pool pixel once
 3. Labels: the saved labels match burned01 in the data, joined by cell_id
 4. Metrics: recomputed from the saved predictions, they equal cv_folds.csv
@@ -28,7 +28,7 @@ from edf_dnn.train.run import load_pixel_table
 run_dir = Path("runs/dev_quick")
 
 # ---------------------------------------------------------------------------
-# 1. The run folder: what produced it
+# 1. The run folder: what produced it, then read its files back in
 # ---------------------------------------------------------------------------
 saved_config = yaml.safe_load(open(run_dir / "config.yaml"))
 experiment, data = saved_config["experiment"], saved_config["data"]
@@ -37,7 +37,8 @@ print(experiment == yaml.safe_load(open(f"configs/experiments/{experiment['name'
 print(data == yaml.safe_load(open("configs/data.yaml")))
 print((run_dir / "git_commit.txt").read_text())          # the commit, and whether files had changed
 
-splits = pd.read_csv(run_dir / "splits.csv")
+# The files run.py wrote, read back in; the sections below check them against each other
+splits =pd.read_csv(run_dir / "splits.csv")
 folds = pd.read_csv(run_dir / "cv_folds.csv")             # one row per setting and fold
 results = pd.read_csv(run_dir / "cv_results.csv")         # one row per setting
 history = pd.read_csv(run_dir / "cv_history.csv")         # one row per setting, fold and epoch
@@ -45,6 +46,21 @@ predictions = pd.read_parquet(run_dir / "cv_predictions.parquet")   # one row pe
 print(len(splits), len(folds), len(results), len(history), len(predictions))   # dev_quick: 563475 5 1 100 507127
 target = data["target"]
 metrics = [name for name in folds.columns if name.startswith("validation_")]   # the 10 metric columns
+
+# splits (splits.csv): which group each historical pixel went into, written before any training.
+#   It has 563,475 rows with two columns: cell_id and split. 
+#   The split is test (56,348 pixels) or fold_1 to fold_5 (about 101,425 each).
+# folds (cv_folds.csv): one row per model trained during cross-validation,
+#   so one per setting and fold (5 rows here). Each row holds the hyperparameters, 
+#   the best epoch, the epochs run, the minutes taken, and the 10 validation metrics at the best epoch.
+# results (cv_results.csv): one row per setting (1 row here). It's folds averaged over
+#   the 5 folds: the mean and sd of each metric, and the median and mean best epoch.
+#   It's sorted best first, and it's the table you pick the winning setting from.
+# history (cv_history.csv): the training curves. There's one row per setting, fold
+#  and epoch: 5 folds × 20 epochs = 100 rows. Each row has the training loss 
+#  and the 10 validation metrics for that epoch.
+# predictions (cv_predictions.parquet): one row per setting and pool pixel (507,127 rows).
+#  Each row is the burn probability a pool pixel got from the one model that didn't train on it, with cell_id, label, setting and fold.
 
 # ---------------------------------------------------------------------------
 # 2. Pixels: each prediction in its own fold, no test pixels, every pool pixel once

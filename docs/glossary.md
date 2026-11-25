@@ -16,7 +16,7 @@ and the nearest R or statistics idea. Add a row whenever a new term comes up.
 | DataLoader | Deals a Dataset out in mini-batches, one per step of a for loop | `batch_loader` | `for (rows in chunks) table[rows, ]` |
 | Sampler (`RandomSampler`, `BatchSampler`) | Decides the order rows are visited in (random or as they are) and cuts it into batches | `batch_loader` | `sample()`, then `split()` |
 | Batch / mini-batch | A handful of samples processed together before one weight update. Full-batch = all data at once, as in the old code | `batch_size` in experiment configs | |
-| Epoch | One full pass through the training data. With batches of 4096 that is about 111 weight updates; in the old full-batch code it was 1 | `max_epochs` | one iteration over all rows |
+| Epoch | One full pass through the training data. With batches of 4096 that is 28 weight updates on a downsampled training fold (110,866 pixels); in the old full-batch code it was 1 | `max_epochs` | one iteration over all rows |
 | Class imbalance | Far more of one class than the other (here about 6 unburned per burned pixel) | | rare-event data |
 | Downsampling | Drop majority-class samples from the training folds until classes are balanced | `downsample` in `data/splits.py`, on every training fold | `sample()` on the unburned rows |
 | `pos_weight` | Alternative to downsampling: keep every sample, but count each burned pixel's error (unburned / burned) times more in the loss | not used: same AUC as downsampling in geocomp-2025 (NOTES.md) | `weights =` in `glm()` |
@@ -39,6 +39,7 @@ and the nearest R or statistics idea. Add a row whenever a new term comes up.
 | MLP (multilayer perceptron) | Stacked linear layers with activations between them. An MLP with no hidden layer is logistic regression | `models/mlp.py` | `glm(family = binomial)` plus learned non-linear transforms of the predictors |
 | Logit | The raw model output, from minus to plus infinity: the log-odds | every model returns logits | `predict(type = "link")` |
 | Sigmoid | Turns a logit into a probability between 0 and 1 | `predict_probabilities` | `plogis()` |
+| Shape, `.squeeze(1)` | A tensor's size along each dimension. The model returns one logit per pixel as a one-column matrix, shape (batch, 1); `.squeeze(1)` drops that size-1 second dimension, giving shape (batch,) like the labels. The loss refuses mismatched shapes. A bare `.squeeze()` (old code) drops every size-1 dimension, including the batch dimension of a 1-pixel batch | `train/loop.py` | `dim()`; `m[, 1]` |
 | Dropout | During training, randomly switch off a fraction of neurons on each pass, so the network can't rely on any single one. Reduces overfitting. Off at prediction time | `dropout` | |
 | Bagging | Train many separate models on resamples of the data and average them. Dropout is often described as a cheap version of bagging many thinned networks inside one network | planned: the downsampling ensemble ("EasyEnsemble", TODO.md) | random forest = bagged trees |
 | `model.train()` / `model.eval()` | Switch the model into training mode (dropout on) or evaluation mode (dropout off) | `train/loop.py` | |
